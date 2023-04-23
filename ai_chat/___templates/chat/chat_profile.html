@@ -1,0 +1,13 @@
+{% extends "crypto_templ/cr_base.html" %}
+
+{% block title %} User profile {% endblock %}
+
+{% block content %}
+<h2> Profile of {{user.username}} </h2>
+{% if user.first_name and user.last_name %}
+<p> Hi, {{user.first_name}} {{user.last_name}}! </p>
+{% else%}
+<p> Hello! </p>
+{% endif %}
+<h3> Your reports </h3>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "chat/chat_base.html" %}
+
+{% load static %}
+{% load bootstrap4 %}
+<head>
+{% block title %} New proposal {% endblock %}
+
+<link rel= "stylesheet" type= "text/css" href= "{% static 'my_css/chat_style.css' %}">
+
+</head>
+{% block content %}
+<h2> Create new proposition </h2>
+<div class="conteiner-fluid mb-2 border">
+<form name="New proposal" method="POST" >
+  {% csrf_token %}
+  <div class="row mb-2">
+    
+	<div class="col">
+	<div class="row ml-4">
+		<div class = "col">
+			<div class="row">&nbsp </div>
+			<div class="row">
+				<b>{{ form.f_job_title.label_tag }}</b>
+			</div>
+			<div class="text_field row ">
+				<pre>{{ form.f_job_title|safe }}</pre>
+			</div>
+									
+			<div class="row">
+				<b>{{ form.f_job_description.label_tag }}</b>
+			</div>
+			<div class="text_field row ">
+				<pre>{{ form.f_job_description|safe }}</pre>
+			</div>
+			
+			<div class="row">
+				{% buttons submit="  Submit  " %} {% endbuttons %}
+			</div>
+		</div>
+	</div>
+	
+	<div class="row ml-4">
+		<div class = "col">
+			<div class="row">&nbsp </div>
+			<div class="row">
+				<b>{{ form.f_propose.label_tag }}</b>
+			</div>
+			<div class="text_field row ">
+				{{ form.f_propose|safe }}<br>
+			</div>
+			<div class="row">&nbsp</div>
+		</div>
+	</div>
+	</div>
+	
+	<div class="col mb-2 border">
+		<h2> Job archive</h2>
+		
+
+		<table border="1" colspan="2" width="100%">
+		<tr>
+		<th>Job_title </th>
+		<th>Delete</th>
+		</tr>
+		{% for record in jobs %}
+		<tr>
+		<td><a href="{% url 'chat:my_new_proposal' id=record.id %}" style="text-decoration:None">{{record.job_title }}</a></td>
+	      
+		<td align="center"><a href="delete/{{record.id}}" style="text-decoration:None">Delete</a></td>
+		</tr>
+		{% endfor %}  
+		</table>
+	</div>
+
+</form>
+</div>
+
+{% endblock %}

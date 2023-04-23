@@ -1,0 +1,14 @@
+{% extends "crypto_templ/cr_base.html" %}
+{% load bootstrap4 %}
+
+{% block title %} Deleting a user {% endblock %}
+
+{% block content %}
+<h2> Deleting a user </h2>
+<form method="post">
+  {% csrf_token %}
+  
+  {% buttons submit="Delete" %} {% endbuttons %}
+</form>
+
+{% endblock %}

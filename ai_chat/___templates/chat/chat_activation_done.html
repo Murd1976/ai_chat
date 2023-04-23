@@ -1,0 +1,9 @@
+{% extends "crypto_templ/cr_base.html" %}
+
+{% block title %} Activation done {% endblock %}
+
+{% block content %}
+<h2> Activation </h2>
+<p> User successfully activated! </p>
+<p> <a href="{% url 'crypto_back:my_login' %}"> Sign in </a> </p>
+{% endblock %}

@@ -1,0 +1,9 @@
+*.log 
+*.logD
+redis.*
+.ai_env/
+celery/
+reports/
+chat/__pycache__/
+chat/migrations/__pycache__/
+

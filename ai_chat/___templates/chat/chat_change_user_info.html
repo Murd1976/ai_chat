@@ -1,0 +1,16 @@
+{% extends "crypto_templ/cr_base.html" %}
+{% load bootstrap4 %}
+
+{% block title %} Change user info {% endblock %}
+
+{% block content %}
+<h2> Change data of user {{ user.username }} </h2>
+
+<form method="post">
+  {% csrf_token %}
+  {% bootstrap_form form layout='horizontal' %}
+
+  {% buttons submit="Save" %} {% endbuttons %}
+</form>
+
+{% endblock %}

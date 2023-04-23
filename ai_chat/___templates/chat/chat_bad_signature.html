@@ -1,0 +1,9 @@
+{% extends "crypto_templ/cr_base.html" %}
+
+{% block title %} Activation error {% endblock %}
+
+{% block content %}
+<h2> Activation </h2>
+<p> Activation of a user with this name failed! </p>
+<p> <a href="{% url crypto:my_register %}"> Register again </a> </p>
+{% endblock %}

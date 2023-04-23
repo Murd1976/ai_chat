@@ -1,0 +1,12 @@
+//for django main progect
+django 
+bootstrap4
+pandas
+python-dotenv
+openai
+
+celery
+celery-progress
+
+//for application
+paramiko
