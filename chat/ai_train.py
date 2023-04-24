@@ -52,7 +52,8 @@ my_model_name = 'my_model_murd_001'
 # Получаем ключ API
 #api_key = "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"
 #api_key = "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"
-#openai.api_key = api_key
+api_key = "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"
+openai.api_key = api_key
 
 # Функция для получения ответа от ChatGPT
 def get_response(model_id, query):

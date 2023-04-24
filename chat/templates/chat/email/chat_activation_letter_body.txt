@@ -1,0 +1,10 @@
+Hellow, {{ user.username }} !
+
+You have registered on the Crypto Back website.
+It is necessary to complete the activation to confirm the identity.
+Please follow the link below:
+
+{{ host }}{% url 'chat:my_register_activate' sign=sign %}
+
+Best regards, 
+site administration.
