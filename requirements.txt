@@ -1,6 +1,10 @@
-//for django main progect
-django 
-bootstrap4
+#for django main progect
+virtualenv .ai_env
+source .ai_env/bin/activate
+
+django
+djangorestframework 
+django-bootstrap4
 pandas
 python-dotenv
 openai
@@ -8,5 +12,5 @@ openai
 celery
 celery-progress
 
-//for application
+#for application
 paramiko

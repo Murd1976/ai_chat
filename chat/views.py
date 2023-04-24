@@ -82,8 +82,10 @@ class DeleteUserView(LoginRequiredMixin, DeleteView):
             queryset = self.get_queryset()
         return get_object_or_404(queryset, pk = self.user_id)
     
-def index(request):    
-    return render(request, "index.html")
+def index(request):   
+    content = 'The homepage of AI Chat.'
+    context = {"content": content}
+    return render(request, "index.html", context)
 
 @login_required
 def user_profile(request):
@@ -163,31 +165,24 @@ def chat_home(request):
     data = {"header": "Main window", "message": "Welcome to Chat!"}
     return render(request, "chat/chat_home.html", context=data)
     
-# delete record of tests
-def delete_record(request, id):
+# delete record
+def delete_record_new(request, id):
+    try:
+        test = MessageChain.objects.get(id=id)
+        test.delete()
+        return redirect('chat:my_new_proposal')
+    except MessageChain.DoesNotExist:
+        return HttpResponseNotFound("<h2>Record not found</h2>")
+
+# delete record
+def delete_record_edit(request, id):
     try:
         test = MessageChain.objects.get(id=id)
         test.delete()
         return redirect('chat:my_edit_proposal')
-    except AllBackTests.DoesNotExist:
-        return HttpResponseNotFound("<h2>Record not found</h2>")
-        
-# choice record
-def choice_record(request, id):
-    template = 'chat/chat_edit_proposal.html'
-    jobs = MessageChain.objects.all()
-    print(request)
-    #request = '/chat/db/edit/'
-    try:
-        record = MessageChain.objects.get(id=id)
-        
-        parts = EditJobForm(initial= {"f_content":'\n\n Proposal: \n' + record.proposal_cover_letter})
-                        
-        context = {"form": parts, "jobs": jobs}
-        return render(request, template, context)
-        #return redirect ('chat:my_edit_proposal', context)
     except MessageChain.DoesNotExist:
         return HttpResponseNotFound("<h2>Record not found</h2>")
+        
 
 def chat_page(request):
     template = 'chat/chat_gpt_response.html'
@@ -278,7 +273,7 @@ def new_proposal_page(request, id = 0):
             '''
             #print(messages)
             #print()
-            query.extend([ " Job title: \n" + j_title,  '\n\n Job description: \n' + j_description, "\n\n Create new proposal for this job"])
+            query.extend([ " Job title: \n" + j_title,  '\n\n Job description: \n' + j_description,  '\n\n Proposal: \n' , "\n\n Create new proposal for this job"])
             
             response = get_proposal(query)
             #print(response)
@@ -308,7 +303,7 @@ def new_proposal_page(request, id = 0):
     context = {"form": parts, "jobs": jobs}
     return render(request, template, context)
     
-def edit_proposal_page(request, id):
+def edit_proposal_page(request, id = 0):
     template = 'chat/chat_edit_proposal.html'
     jobs = MessageChain.objects.all()
     
@@ -327,21 +322,24 @@ def edit_proposal_page(request, id):
             
             #data_bufer = DataBufer(name=request.user, user_strategy_choise=strategy_choise)
             #data_bufer.save()
-            '''
+            
             messages = []
-            message_chain = MessageChain.objects.filter(owner = request.user).last()
-            messages.extend([" Job title: \n", message_chain.job_title, '\n\n Job description: \n', message_chain.job_description, '\n\n Proposal: \n', 
-                                message_chain.proposal_cover_letter])
+            text = 'Examples: '
+            for message_chain in MessageChain.objects.all():
+        
+                text += " Job title: \n" + message_chain.job_title + '\n\n Job description: \n' + message_chain.job_description + '\n\n Proposal: \n' + message_chain.proposal_cover_letter
+            
             #messages.extend([message_chain.job_title])
             #print(messages)
-            '''
+            
             #print(messages)
             #print()
             #query.extend([ " Job title: \n" + j_title,  '\n\n Job description: \n' + j_description, "\n\n Create new proposal for this job"])
-            query.extend([" Job title: \n" + curr_job_chain.job_title, '\n\n Job description: \n' + curr_job_chain.job_description, 
-                                '\n\n Proposal: \n' + curr_job_chain.proposal_cover_letter, j_feedback])
+            query.extend([" Job title: \n" + curr_job_chain.job_title + '\n\n Job description: \n' + curr_job_chain.job_description + 
+                                '\n\n Proposal: \n' + curr_job_chain.proposal_cover_letter, 'Feedback: ' + j_feedback])
             
-            response = get_proposal(query)
+            messages.extend(query)
+            response = get_proposal(messages)
             
             curr_job_chain.proposal_cover_letter = response.strip()
             curr_job_chain.save(update_fields=["proposal_cover_letter"])

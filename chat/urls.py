@@ -13,8 +13,10 @@ urlpatterns = [
     path('chat/db/new/<int:id>/', views.new_proposal_page, name= 'my_new_proposal'),
     path('chat/db/new/', views.new_proposal_page, name= 'my_new_proposal'),
     path('chat/db/edit/<int:id>/', views.edit_proposal_page, name= 'my_edit_proposal'),
-    #path('chat/db/edit/<int:id>/', views.choice_record, name= 'my_record'),
-    path('chat/db/edit/del/<int:id>/', views.delete_record, name= 'my_del_record'),
+    path('chat/db/edit/', views.edit_proposal_page, name= 'my_edit_proposal'),
+    
+    path('chat/db/edit/del/<int:id>/', views.delete_record_edit, name= 'my_del_record_edit'),
+    path('chat/db/new/del/<int:id>/', views.delete_record_new, name= 'my_del_record_new'),
     
     
     

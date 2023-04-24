@@ -49,6 +49,10 @@ load_dotenv()
 openai.api_key = os.getenv('OPENAI_API_KEY')
 my_model_name = 'my_model_murd_001'
 
+# Получаем ключ API
+#api_key = "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"
+#api_key = "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"
+#openai.api_key = api_key
 
 # Функция для получения ответа от ChatGPT
 def get_response(model_id, query):
@@ -60,8 +64,9 @@ def get_response(model_id, query):
         model= model_id,
         prompt=query,
         temperature=0.6,
-        max_tokens=400,
+        #max_tokens=400,
         top_p=1.0,
+        stop=None,
         frequency_penalty=0.0,
         presence_penalty=0.0
         
@@ -89,8 +94,9 @@ def get_proposal(query):
             model= model_id,
             prompt=query,
             temperature=0.6,
-            max_tokens=400,
+            #max_tokens=400,
             top_p=1.0,
+            stop=None,
             frequency_penalty=0.0,
             presence_penalty=0.0
            
@@ -101,8 +107,9 @@ def get_proposal(query):
             model= "text-davinci-003",
             prompt=query,
             temperature=0.6,
-            max_tokens=400,
+            max_tokens=700,
             top_p=1.0,
+            stop=None,
             frequency_penalty=0.0,
             presence_penalty=0.0
             
@@ -174,15 +181,13 @@ def train_chat():
         num_epochs=5
     )
 
-    # Wait for the model to finish training
-    model.wait_until_ready()
-
+    
     # Save the trained model
     
     model.update(model_id=model_id)
-    
-    status = model.retrieve(model_id)
-    print("Status: ", status)
+           
+    #status = model.retrieve(model_id)
+    #print("Status: ", status)
     models = openai.Model.list()
     for mod in models["data"]:
         print(mod["id"])

@@ -53,7 +53,7 @@
 		<tr>
 		<td><a href="{% url 'chat:my_edit_proposal' id=record.id %}" style="text-decoration:None">{{record.job_title }}</a></td>
 	      
-		<td align="center"><a href="delete/{{record.id}}" style="text-decoration:None">Delete</a></td>
+		<td align="center"><a href="{% url 'chat:my_del_record_edit' id=record.id %}" style="text-decoration:None">Delete</a></td>
 		</tr>
 		{% endfor %}  
 		</table>
