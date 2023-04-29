@@ -1,4 +1,7 @@
 import openai
+import json
+import websocket
+
 import os
 import django
 from dotenv import load_dotenv
@@ -50,10 +53,8 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 my_model_name = 'my_model_murd_001'
 
 # Получаем ключ API
-#api_key = "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"
-#api_key = "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"
-api_key = "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"
-openai.api_key = api_key
+
+#openai.api_key = api_key
 
 # Функция для получения ответа от ChatGPT
 def get_response(model_id, query):
@@ -64,8 +65,8 @@ def get_response(model_id, query):
     response = openai.Completion.create(
         model= model_id,
         prompt=query,
-        temperature=0.6,
-        #max_tokens=400,
+        temperature=0.2,
+        max_tokens=2700,
         top_p=1.0,
         stop=None,
         frequency_penalty=0.0,
@@ -83,7 +84,26 @@ def get_response(model_id, query):
             reply = choice["text"]
             break
     #print('The answer: ', reply)
+    '''
+    # Получение списка предыдущих диалогов
+    response = openai.Conversation.list(status="complete")
+    conversations = response["data"]
 
+    for conversation in conversations:
+        print(f"Conversation ID: {conversation['id']}")
+    '''
+    #models = openai.Model.list()
+    #models = openai.FineTune.list()
+    #models = openai.Engine.retrieve("text-davinci-003")
+    #print(models)
+    
+    #get_chat_id_list()
+    
+    '''
+    for mod in models["data"]:
+        #print(mod["id"])
+        print(mod)
+    '''
     return reply
         
 # Функция для получения ответа от ChatGPT
@@ -94,8 +114,8 @@ def get_proposal(query):
         response = openai.Completion.create(
             model= model_id,
             prompt=query,
-            temperature=0.6,
-            #max_tokens=400,
+            temperature=0.2,
+            max_tokens=2700,
             top_p=1.0,
             stop=None,
             frequency_penalty=0.0,
@@ -107,8 +127,8 @@ def get_proposal(query):
         response = openai.Completion.create(
             model= "text-davinci-003",
             prompt=query,
-            temperature=0.6,
-            max_tokens=700,
+            temperature=0.2,
+            max_tokens=2700,
             top_p=1.0,
             stop=None,
             frequency_penalty=0.0,
@@ -127,22 +147,24 @@ def get_proposal(query):
         if choice["text"]:
             reply = choice["text"]
             break
-    
+    '''
     #print('The answer: ', reply)
-    query.extend(["\n Proposal: \n", reply])
-    
+    #query.extend(["\n Proposal: \n", reply])
+    query += reply
     # Fine-tune a new model based on the existing ones
-    model = openai.Model(
-        id = model_id,
-        model="text-davinci-003",
-        fine_tune= model_id, #base_models,
-        training_data= query,
-        num_epochs=5
+    model = openai.FineTune.create(
+        
+        model = model_id,
+        base_model = "davinci",
+        train_file = "train_file.csv",
+        max_epochs=7
     )
     
     # Save the trained model
-    #model.update(model_id=model_id)
-   
+    model.update(model_id=model_id)
+    models = openai.FineTune.list()
+    print(models)
+    '''
     # Set the default model for future requests
     openai.api_model_id = model_id
     
@@ -158,7 +180,7 @@ def train_chat():
     messages = []
     for message_chain in MessageChain.objects.all():
         
-        messages.extend([" Job title: \n" + message_chain.job_title, '\n\n Job description: \n' + message_chain.job_description, '\n\n Proposal: \n' + message_chain.proposal_cover_letter])
+        messages.extend([" Job title: \n" + message_chain.job_title + ' Job description: ' + message_chain.job_description, ' Proposal: \n' + message_chain.proposal_cover_letter])
         for qa in QuestionAnswer.objects.filter(message_chain=message_chain):
             messages.extend(["\n Question: \n" + qa.question, "\n Answer: \n" + qa.answer])
 
@@ -197,3 +219,25 @@ def train_chat():
     openai.api_model_id = model_id
     
     print(f"Stop traning model {model_id}!")
+    
+
+def get_chat_id_list():
+    # установка соединения WebSocket
+    ws = websocket.create_connection("wss://api.openai.com/v1/engines/text-davinci-003/conversations/list/ws",
+                                  header={"Authorization": f"Bearer {openai.api_key}"})
+
+    # отправка запроса на получение списка сохраненных диалогов
+    message = {
+        "type": "list",
+    }
+    ws.send(json.dumps(message))
+
+    # получение ответа и вывод списка сохраненных диалогов
+    result = ws.recv()
+    response = json.loads(result)
+    if response["type"] == "conversation_ids":
+        conversation_ids = response["data"]["conversation_ids"]
+        print("Список сохраненных диалогов:")
+        print(conversation_ids)
+    else:
+        print("Не удалось получить список сохраненных диалогов")

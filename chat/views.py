@@ -202,8 +202,8 @@ def chat_page(request):
             #data_bufer.save()
             
             messages = []
-            message_chain = MessageChain.objects.filter(owner = request.user).last()
-            messages.extend([" Job title: \n" + message_chain.job_title, '\n\n Job description: \n' + message_chain.job_description, '\n\n Proposal: \n' + message_chain.proposal_cover_letter, "\n\n Create new Proposal for this job."])
+            #message_chain = MessageChain.objects.filter(owner = request.user).last()
+            #messages.extend([" Job title: \n" + message_chain.job_title, '\n\n Job description: \n' + message_chain.job_description, '\n\n Proposal: \n' + message_chain.proposal_cover_letter, "\n\n Create new Proposal for this job."])
             #messages.extend([" Job title: \n" + message_chain.job_title, '\n\n Job description: \n' + message_chain.job_description, '\n\n Proposal: \n', "\n\n Create Proposal for this job."])
             
             #messages.extend(["\n Question: \n", query])
@@ -217,7 +217,7 @@ def chat_page(request):
                     messages.extend(["\n Question: \n", qa.question, "\n Answer: \n", qa.answer])
             '''
                                     
-            response = get_response("my_model_murd_001", messages)
+            response = get_response("text-davinci-003", query)
             #print(response)
             '''
             # сохраняем ответ в базу данных
@@ -253,7 +253,7 @@ def new_proposal_page(request, id = 0):
         userform = JobForm(request.POST or None)
                 
         if userform.is_valid():
-            query = [] 
+            query = ["Create new proposal cover letter for last job title and job description."] 
             
             j_title = userform.cleaned_data["f_job_title"] 
             j_description = userform.cleaned_data["f_job_description"]
@@ -263,17 +263,20 @@ def new_proposal_page(request, id = 0):
             
             #data_bufer = DataBufer(name=request.user, user_strategy_choise=strategy_choise)
             #data_bufer.save()
-            '''
+           
             messages = []
-            message_chain = MessageChain.objects.filter(owner = request.user).last()
-            messages.extend([" Job title: \n", message_chain.job_title, '\n\n Job description: \n', message_chain.job_description, '\n\n Proposal: \n', 
-                                message_chain.proposal_cover_letter])
+            count = 0
+            for message_chain in MessageChain.objects.all():
+                #if count > 1: break
+                messages.extend([ " Job title: \n" + message_chain.job_title + '\n\n Job description: \n' + message_chain.job_description + '\n\n Proposal: \n' + message_chain.proposal_cover_letter])
+                count += 1
             #messages.extend([message_chain.job_title])
             #print(messages)
-            '''
+            
             #print(messages)
             #print()
-            query.extend([ " Job title: \n" + j_title,  '\n\n Job description: \n' + j_description,  '\n\n Proposal: \n' , "\n\n Create new proposal for this job"])
+            #query.extend([messages, " Job title: \n" + j_title +  '\n\n Job description: \n' + j_description +  '\n\n Proposal: \n'])
+            query = f"Create new proposal cover letter for job title and job description below\n\n {messages[7]}\n\n Proposal:\n"
             
             response = get_proposal(query)
             #print(response)
@@ -298,8 +301,12 @@ def new_proposal_page(request, id = 0):
         curr_job_chain = MessageChain.objects.get(id=id)
     else:
         curr_job_chain = MessageChain.objects.last()
-    
-    parts = JobForm(initial= {"f_job_title":curr_job_chain.job_title, "f_job_description":curr_job_chain.job_description, "f_propose":curr_job_chain.proposal_cover_letter})
+        
+    if (curr_job_chain == None):
+        parts = JobForm()
+    else:
+        parts = JobForm(initial= {"f_job_title":curr_job_chain.job_title, "f_job_description":curr_job_chain.job_description, "f_propose":curr_job_chain.proposal_cover_letter})
+        
     context = {"form": parts, "jobs": jobs}
     return render(request, template, context)
     
@@ -311,11 +318,12 @@ def edit_proposal_page(request, id = 0):
     if request.method == "POST":
         
         userform = EditJobForm(request.POST or None)
-        curr_job_chain = MessageChain.objects.filter(owner = request.user).last()
+        
         if userform.is_valid():
-            query = [] 
+            #query = [] 
             
-            j_feedback = userform.cleaned_data["f_feedback"] 
+            j_feedback = userform.cleaned_data["f_feedback"]
+            curr_job_chain = MessageChain.objects.filter(owner = request.user).get(id = id)
                         
             #data_bufer = DataBufer.objects.filter(name=request.user)
             #data_bufer.delete()
@@ -323,11 +331,14 @@ def edit_proposal_page(request, id = 0):
             #data_bufer = DataBufer(name=request.user, user_strategy_choise=strategy_choise)
             #data_bufer.save()
             
+            #messages = ['Feedback: ' + j_feedback]
             messages = []
-            text = 'Examples: '
+            #text = 'Examples: '
+            count = 0
             for message_chain in MessageChain.objects.all():
-        
-                text += " Job title: \n" + message_chain.job_title + '\n\n Job description: \n' + message_chain.job_description + '\n\n Proposal: \n' + message_chain.proposal_cover_letter
+                if count > 10: break
+                messages.extend([ " Job title: \n" + message_chain.job_title + '\n\n Job description: \n' + message_chain.job_description + '\n\n Proposal: \n' + message_chain.proposal_cover_letter])
+                count += 1
             
             #messages.extend([message_chain.job_title])
             #print(messages)
@@ -335,11 +346,13 @@ def edit_proposal_page(request, id = 0):
             #print(messages)
             #print()
             #query.extend([ " Job title: \n" + j_title,  '\n\n Job description: \n' + j_description, "\n\n Create new proposal for this job"])
-            query.extend([" Job title: \n" + curr_job_chain.job_title + '\n\n Job description: \n' + curr_job_chain.job_description + 
-                                '\n\n Proposal: \n' + curr_job_chain.proposal_cover_letter, 'Feedback: ' + j_feedback])
+            #messages.extend([" Job title: \n" + curr_job_chain.job_title + '\n\n Job description: \n' + curr_job_chain.job_description + 
+            #                    '\n\n Proposal: \n' + curr_job_chain.proposal_cover_letter])
+            example = " Job title: \n" + curr_job_chain.job_title + '\n\n Job description: \n' + curr_job_chain.job_description + '\n\n Proposal: \n' + curr_job_chain.proposal_cover_letter
+            query = f"{j_feedback}\n\n {example}\n\n New Proposal:\n"
             
-            messages.extend(query)
-            response = get_proposal(messages)
+            #query.extend(messages)
+            response = get_proposal(query)
             
             curr_job_chain.proposal_cover_letter = response.strip()
             curr_job_chain.save(update_fields=["proposal_cover_letter"])
@@ -366,14 +379,17 @@ def edit_proposal_page(request, id = 0):
     else:
         curr_job_chain = MessageChain.objects.last()
       
-    query = []
-    query.extend([curr_job_chain.proposal_cover_letter])
+    if (curr_job_chain == None):
+        parts = JobForm()
+    else:
+        query = []
+        query.extend([curr_job_chain.proposal_cover_letter])
     
-    st = ""
-    for buf in query:
-        st += buf
-    
-    parts = EditJobForm(initial= {"f_content":st})
+        st = ""
+        for buf in query:
+            st += buf
+        parts = EditJobForm(initial= {"f_content":st})
+        
     context = {"form": parts, "jobs": jobs}
     return render(request, template, context)
     

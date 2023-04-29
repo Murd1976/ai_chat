@@ -8,6 +8,7 @@ django-bootstrap4
 pandas
 python-dotenv
 openai
+openpyxl
 
 celery
 celery-progress
