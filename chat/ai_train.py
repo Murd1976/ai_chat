@@ -5,7 +5,7 @@ import websocket
 import os
 import django
 from dotenv import load_dotenv
-from .models import Message
+#from .models import Message
 from django.core.management.base import BaseCommand
 from chat.models import MessageChain, QuestionAnswer
 

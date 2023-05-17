@@ -12,17 +12,14 @@ class AdvUser(AbstractUser):
     class Meta(AbstractUser.Meta):
         pass
 
-class Message(models.Model):
-    owner = models.ForeignKey(AdvUser, verbose_name='Test owner.', on_delete = models.DO_NOTHING)
-    job_description = models.CharField(max_length=50)
-    proposal_letter = models.CharField(max_length=50)
-    question_id = models.CharField(max_length=50)
-    answer_id = models.CharField(max_length=50)
-    text = models.TextField()
+class ChatList(models.Model):
+    owner = models.ForeignKey(AdvUser, verbose_name='Chat owner.', on_delete = models.DO_NOTHING)
+    chat_name = models.CharField(max_length=100)
+    
     created_at = models.DateTimeField(auto_now_add=True, db_index=True, verbose_name='Message time.')
 
     def __str__(self):
-        return self.text
+        return f"ChatName: {self.chat_name}"
 
     @classmethod
     def get_all_messages(cls):
@@ -47,3 +44,21 @@ class QuestionAnswer(models.Model):
 
     def __str__(self):
         return f"QuestionAnswer: {self.question} - {self.answer}"
+        
+class ProposalHistory(models.Model):
+    message_chain = models.ForeignKey(MessageChain, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True, verbose_name='Message time.')
+    user_question = models.TextField()
+    ai_answer = models.TextField()
+
+    def __str__(self):
+        return f"ProposalHistory: {self.user_question} - {self.ai_answer}"
+        
+class ChatHistory(models.Model):
+    message = models.ForeignKey(ChatList, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True, verbose_name='Message time.')
+    user_question = models.TextField()
+    ai_answer = models.TextField()
+
+    def __str__(self):
+        return f"ChatHistory: {self.user_question} - {self.ai_answer}"

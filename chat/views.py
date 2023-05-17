@@ -253,7 +253,7 @@ def new_proposal_page(request, id = 0):
         userform = JobForm(request.POST or None)
                 
         if userform.is_valid():
-            query = ["Create new proposal cover letter for last job title and job description."] 
+            query_text = ["Create new proposal cover letter for job title and job description below\n\n"] 
             
             j_title = userform.cleaned_data["f_job_title"] 
             j_description = userform.cleaned_data["f_job_description"]
@@ -276,7 +276,10 @@ def new_proposal_page(request, id = 0):
             #print(messages)
             #print()
             #query.extend([messages, " Job title: \n" + j_title +  '\n\n Job description: \n' + j_description +  '\n\n Proposal: \n'])
-            query = f"Create new proposal cover letter for job title and job description below\n\n {messages[7]}\n\n Proposal:\n"
+            #query = f"Create new proposal cover letter for job title and job description below\n\n {messages[7]}\n\n Proposal:\n"
+            
+            curr_job_chain = MessageChain.objects.filter(owner = request.user).last()
+            query = f"{query_text}  Job title: {j_title}\n\n Job description: {j_description}\n\n Example of proposal: {curr_job_chain.proposal_cover_letter}\n"
             
             response = get_proposal(query)
             #print(response)
@@ -288,6 +291,13 @@ def new_proposal_page(request, id = 0):
                 job_description = j_description,
                 proposal_cover_letter = response.strip(),
                 chat_interview = ""
+            )
+            
+            # создаем новый чат для нового предложения и сохраняем в базу данных
+            ProposalHistory.objects.create(
+                message_chain = MessageChain.objects.last(),
+                user_question = query,
+                ai_answer = response.strip()
             )
                                     
             parts = JobForm(initial= {"f_job_title":j_title, "f_job_description":j_description, "f_propose":response.strip()})
@@ -301,10 +311,11 @@ def new_proposal_page(request, id = 0):
         curr_job_chain = MessageChain.objects.get(id=id)
     else:
         curr_job_chain = MessageChain.objects.last()
-        
+            
     if (curr_job_chain == None):
         parts = JobForm()
     else:
+        
         parts = JobForm(initial= {"f_job_title":curr_job_chain.job_title, "f_job_description":curr_job_chain.job_description, "f_propose":curr_job_chain.proposal_cover_letter})
         
     context = {"form": parts, "jobs": jobs}
@@ -349,13 +360,20 @@ def edit_proposal_page(request, id = 0):
             #messages.extend([" Job title: \n" + curr_job_chain.job_title + '\n\n Job description: \n' + curr_job_chain.job_description + 
             #                    '\n\n Proposal: \n' + curr_job_chain.proposal_cover_letter])
             example = " Job title: \n" + curr_job_chain.job_title + '\n\n Job description: \n' + curr_job_chain.job_description + '\n\n Proposal: \n' + curr_job_chain.proposal_cover_letter
-            query = f"{j_feedback}\n\n {example}\n\n New Proposal:\n"
-            
+            query = f"{j_feedback}: \n\n {example}\n\n New Proposal:\n"
+            #print(query)
             #query.extend(messages)
             response = get_proposal(query)
             
             curr_job_chain.proposal_cover_letter = response.strip()
             curr_job_chain.save(update_fields=["proposal_cover_letter"])
+            
+            # создаем новую запись в чате для текущего предложения
+            ProposalHistory.objects.create(
+                message_chain = curr_job_chain,
+                user_question = query,
+                ai_answer = response.strip()
+            )
             #print(response)
             '''
             # сохраняем ответ в базу данных
@@ -382,11 +400,21 @@ def edit_proposal_page(request, id = 0):
     if (curr_job_chain == None):
         parts = JobForm()
     else:
-        query = []
-        query.extend([curr_job_chain.proposal_cover_letter])
-    
+        #query = []
+        #query.extend([curr_job_chain.proposal_cover_letter])
+        messages = []
+        res = ProposalHistory.objects.filter(message_chain=curr_job_chain)
+        
+        if(len(res) == 0):
+            messages.extend(curr_job_chain.proposal_cover_letter)
+        else:
+            for qa in res:
+                if not (pd.isna(qa.user_question)):
+                    messages.extend(["\n ______________________________________________________ \n", qa.user_question, "\n ______________________________________________________ \n", qa.ai_answer])
+        #parts = JobForm(initial= {"f_job_title":curr_job_chain.job_title, "f_job_description":curr_job_chain.job_description, "f_propose":messages})
+        
         st = ""
-        for buf in query:
+        for buf in messages:
             st += buf
         parts = EditJobForm(initial= {"f_content":st})
         
