@@ -150,9 +150,17 @@ def gpt_response(request):
     
     
 def train_page(request):
-    train_chat()
+    #train_chat()
+    
     context = {"train_res": "Training of model complited!"}
     return render(request, "chat/chat_train_model.html", context)
+    
+def train_status_page(request):
+    response = "No treined models"
+    #response = train_status("ft-7QqiAyTvtmME8WHn6ZKAQa07")
+    parts = OutTextForm(initial= {"f_content":response})
+    context = {"form": parts}
+    return render(request, "chat/chat_train_status.html", context)
 
 def other_page(request, page):
     try:
@@ -248,16 +256,20 @@ def chat_page(request):
 def new_proposal_page(request, id = 0):
     template = 'chat/chat_new_proposal.html'
     jobs = MessageChain.objects.all()
+    models = [(0, 'text-davinci-003'), (1, 'gpt-3.5-turbo')]
     if request.method == "POST":
         
         userform = JobForm(request.POST or None)
                 
         if userform.is_valid():
-            query_text = ["Create new proposal cover letter for job title and job description below\n\n"] 
+            sys_msg = " You are an assistant who creates a proposal cover letter for new job offers."
+            query_text = " Create new proposal cover letter for job title and job description below.:\n\n" 
+            
             
             j_title = userform.cleaned_data["f_job_title"] 
             j_description = userform.cleaned_data["f_job_description"]
-            
+            curr_model = dict(models)[int(userform.cleaned_data["f_model"])]
+            #print(f"\n Current model: {curr_model} \n")
             #data_bufer = DataBufer.objects.filter(name=request.user)
             #data_bufer.delete()
             
@@ -278,10 +290,14 @@ def new_proposal_page(request, id = 0):
             #query.extend([messages, " Job title: \n" + j_title +  '\n\n Job description: \n' + j_description +  '\n\n Proposal: \n'])
             #query = f"Create new proposal cover letter for job title and job description below\n\n {messages[7]}\n\n Proposal:\n"
             
-            curr_job_chain = MessageChain.objects.filter(owner = request.user).last()
+            #curr_job_chain = MessageChain.objects.filter(owner = request.user).last()
+            curr_job_chain = MessageChain.objects.last()
             query = f"{query_text}  Job title: {j_title}\n\n Job description: {j_description}\n\n Example of proposal: {curr_job_chain.proposal_cover_letter}\n"
             
-            response = get_proposal(query)
+            if (curr_model == 'text-davinci-003'):
+                    response = get_proposal(query)
+            if (curr_model == 'gpt-3.5-turbo'):
+                    response = get_proposal_turbo(query, sys_msg)
             #print(response)
             
             # сохраняем ответ в базу данных
@@ -289,7 +305,8 @@ def new_proposal_page(request, id = 0):
                 owner = request.user,
                 job_title = j_title,
                 job_description = j_description,
-                proposal_cover_letter = response.strip(),
+                #proposal_cover_letter = response.strip(),
+                proposal_cover_letter = response,
                 chat_interview = ""
             )
             
@@ -297,10 +314,11 @@ def new_proposal_page(request, id = 0):
             ProposalHistory.objects.create(
                 message_chain = MessageChain.objects.last(),
                 user_question = query,
-                ai_answer = response.strip()
+                #ai_answer = response.strip()
+                ai_answer = response
             )
                                     
-            parts = JobForm(initial= {"f_job_title":j_title, "f_job_description":j_description, "f_propose":response.strip()})
+            parts = JobForm(initial= {"f_job_title":j_title, "f_job_description":j_description, "f_propose":response})
                         
             context = {"form": parts, "jobs": jobs}
             return render(request, template, context)
@@ -324,7 +342,7 @@ def new_proposal_page(request, id = 0):
 def edit_proposal_page(request, id = 0):
     template = 'chat/chat_edit_proposal.html'
     jobs = MessageChain.objects.all()
-    
+    models = [(0, 'text-davinci-003'), (1, 'gpt-3.5-turbo')]
            
     if request.method == "POST":
         
@@ -332,10 +350,18 @@ def edit_proposal_page(request, id = 0):
         
         if userform.is_valid():
             #query = [] 
+            sys_msg = "You are an assistant who, based on the user's comments, edits the current cover letter for new job offers."
+            if(id == 0): 
+                template = 'chat/chat_msg_page.html'
+                context = {"my_msg":"First you need to select an entry!"}
+                #return HttpResponse("First you need to select an entry!")
+                return render(request, template, context)
             
             j_feedback = userform.cleaned_data["f_feedback"]
-            curr_job_chain = MessageChain.objects.filter(owner = request.user).get(id = id)
-                        
+            #curr_job_chain = MessageChain.objects.filter(owner = request.user).get(id = id)
+            curr_job_chain = MessageChain.objects.get(id = id)
+            curr_model = dict(models)[int(userform.cleaned_data["f_model"])]
+            
             #data_bufer = DataBufer.objects.filter(name=request.user)
             #data_bufer.delete()
             
@@ -363,7 +389,11 @@ def edit_proposal_page(request, id = 0):
             query = f"{j_feedback}: \n\n {example}\n\n New Proposal:\n"
             #print(query)
             #query.extend(messages)
-            response = get_proposal(query)
+            #response = get_proposal(query)
+            if (curr_model == 'text-davinci-003'):
+                    response = get_proposal(query)
+            if (curr_model == 'gpt-3.5-turbo'):
+                    response = get_proposal_turbo(query, sys_msg)
             
             curr_job_chain.proposal_cover_letter = response.strip()
             curr_job_chain.save(update_fields=["proposal_cover_letter"])
@@ -385,7 +415,24 @@ def edit_proposal_page(request, id = 0):
                 chat_interview = ""
             )
             '''                        
-            parts = EditJobForm(initial= {"f_content":response.strip()})
+            
+            messages = []
+            res = ProposalHistory.objects.filter(message_chain=curr_job_chain)
+        
+            if(len(res) == 0):
+                messages.extend(curr_job_chain.proposal_cover_letter)
+            else:
+                for qa in res:
+                    if not (pd.isna(qa.user_question)):
+                        messages.extend(["\n ______________________________________________________ \n", qa.user_question, "\n ______________________________________________________ \n", qa.ai_answer])
+                
+            st = ""
+            for buf in messages:
+                st += buf
+            parts = EditJobForm(initial= {"f_content":st})
+
+            
+            #parts = EditJobForm(initial= {"f_content":response.strip()})
                         
             context = {"form": parts, "jobs": jobs}
             return render(request, template, context)

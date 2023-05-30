@@ -1,0 +1,41 @@
+{% extends "chat/chat_base.html" %}
+
+{% load static %}
+{% load bootstrap4 %}
+<head>
+{% block title %} Training status {% endblock %}
+
+<link rel= "stylesheet" type= "text/css" href= "{% static 'my_css/chat_style.css' %}">
+
+</head>
+{% block content %}
+<h2> Training status</h2>
+<div class="conteiner-fluid mb-2 border">
+<form name="TStatus" method="POST" >
+  {% csrf_token %}
+  <div class="row mb-2">
+    
+	<div class="col">
+	<div class="row ml-4">
+		<div class = "col">
+			<div class="row">&nbsp </div>
+			<div class="row">
+				<b>{{ form.f_content.label_tag }}</b>
+			</div>
+			<div class="text_field row ">
+				<pre>{{ form.f_content|safe }}</pre>
+			</div>
+									
+			
+			
+			<div class="row">
+				{% buttons submit="  Status  " %} {% endbuttons %}
+			</div>
+		</div>
+	</div>
+	</div>
+	
+</form>
+</div>
+
+{% endblock %}

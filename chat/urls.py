@@ -10,6 +10,7 @@ urlpatterns = [
     path('chat/gpt/', views.chat_page, name= 'my_chat_gpt'),
     path('chat/db/', views.load_base_page, name= 'my_load_base'),
     path('chat/db/train/', views.train_page, name= 'my_train_model'),
+    path('chat/db/train/status/', views.train_status_page, name= 'my_status_model'),
     path('chat/db/new/<int:id>/', views.new_proposal_page, name= 'my_new_proposal'),
     path('chat/db/new/', views.new_proposal_page, name= 'my_new_proposal'),
     path('chat/db/edit/<int:id>/', views.edit_proposal_page, name= 'my_edit_proposal'),

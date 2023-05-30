@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from .models import AdvUser
 from .apps import user_registered
 
-version = 2.0
+version = 2.3
 
 class UserForm(forms.Form):
     name = forms.CharField()
@@ -69,11 +69,16 @@ class JobForm(forms.Form):
     f_job_title = forms.CharField(label="Job tile", required=True, widget=forms.TextInput(attrs={'class':'str_input', 'placeholder': 'job title', 'size': 90}))
     f_job_description = forms.CharField(label="Job description", widget= forms.Textarea(attrs={'class':'text_field', 'rows':'8', 'cols':'80'}), disabled = False, required=True)
     f_propose = forms.CharField(label="Proposal", widget= forms.Textarea(attrs={'class':'text_field', 'rows':'15', 'cols':'80'}), disabled = False, required=False)
+    f_model = forms.ChoiceField(label="Select an AI model:", initial=0, required= True, choices=((0, "text-davinci-003"), (1, "gpt-3.5-turbo")))
     
 class EditJobForm(forms.Form):
 
     f_content = forms.CharField(label="Proposal", widget= forms.Textarea(attrs={'class':'text_field', 'rows':'15', 'cols':'80'}), disabled = False, required=True)
     f_feedback = forms.CharField(label="FeedBack", widget= forms.Textarea(attrs={'class':'text_field', 'rows':'8', 'cols':'80'}), disabled = False, required=False)
+    f_model = forms.ChoiceField(label="Select an AI model:", initial=0, required= True, choices=((0, "text-davinci-003"), (1, "gpt-3.5-turbo")))
+    
+class OutTextForm(forms.Form):
+    f_content = forms.CharField(label="Status", widget= forms.Textarea(attrs={'class':'text_field', 'rows':'15', 'cols':'80'}), disabled = False, required=True)
     
 class DbLoadForm(forms.Form):
     db_name = forms.CharField(required=True)

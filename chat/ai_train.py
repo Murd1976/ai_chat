@@ -3,6 +3,7 @@ import json
 import websocket
 
 import os
+import pandas as pd
 import django
 from dotenv import load_dotenv
 #from .models import Message
@@ -108,8 +109,14 @@ def get_response(model_id, query):
         
 # Функция для получения ответа от ChatGPT
 def get_proposal(query):
+
+    print('---------------------------')
+    print(query)
+    print('---------------------------')
+    
     # Формируем запрос к API
     model_id = my_model_name
+    '''
     try:
         response = openai.Completion.create(
             model= model_id,
@@ -124,7 +131,10 @@ def get_proposal(query):
         )
         print("Used model: " + model_id)
     except:
+    '''
+    try:
         response = openai.Completion.create(
+        
             model= "text-davinci-003",
             prompt=query,
             temperature=0.2,
@@ -133,9 +143,15 @@ def get_proposal(query):
             stop=None,
             frequency_penalty=0.0,
             presence_penalty=0.0
-            
+        
         )
         print("Used model: text-davinci-003")
+    except openai.OpenAIError as e:
+        print(f'OpenAI API Error: {e}')
+        return e
+    except Exception as e:
+        print(f'Error: {e}')
+        return e
         
     print('+++++++++++++++++++++++++++++++++')
     print(response)
@@ -170,12 +186,62 @@ def get_proposal(query):
     
 
     return reply
+    
+# Функция для получения ответа от ChatGPT
+def get_proposal_turbo(query, sys_msg):
+
+    print('---------------------------')
+    print(query)
+    print('---------------------------')
+    
+    # Формируем запрос к API
+    
+    try:
+        response = openai.ChatCompletion.create(
+            
+            model= "gpt-3.5-turbo",
+            #model= "gpt-4",
+            messages=[
+                {"role": "system", "content": sys_msg},
+                {"role": "user", "content":query}],
+            temperature=0.2,
+            max_tokens=2700,
+            top_p=1.0,
+            stop=None,
+            frequency_penalty=0.0,
+            presence_penalty=0.0
+            
+        )
+        print("Used model: gpt-3.5-turbo")
+    except openai.OpenAIError as e:
+        print(f'OpenAI API Error: {e}')
+        return e
+    except Exception as e:
+        print(f'Error: {e}')
+        return e
+        
+    print('+++++++++++++++++++++++++++++++++')
+    print(response)
+    print('+++++++++++++++++++++++++++++++++')
+    # Получаем ответ
+    reply = ""
+    #reply = response["choices"][0]["text"] #response_json["choices"][0]["text"]
+    for choice in response["choices"]:
+        if choice["message"]:
+            reply = choice["message"]["content"]
+            break
+    
+    
+    
+
+    return reply
         
 def train_chat():
     
     #openai.api_key = "YOUR_API_KEY"
     print("Start traning model!")
-    
+    create_train_file()
+    '''
     # Get all messages from the database
     messages = []
     for message_chain in MessageChain.objects.all():
@@ -188,6 +254,7 @@ def train_chat():
     #with open('external_data.txt', 'r') as f:
     #    messages.extend(f.read().split('\n'))
     '''
+    '''
     # Use multiple models as the starting point for training
     base_models = [
         "model-1-id",
@@ -197,17 +264,35 @@ def train_chat():
     '''
     model_id = 'my_model_murd_001' #my_model_name
     # Initialize a new model instance and start fine-tuning it
+    '''
     model = openai.Model(
-        model="text-davinci-003",
+        model="davinci",
         fine_tune=model_id,
         training_data=messages,
         num_epochs=5
     )
-
+    '''
+        
+    # Загрузка файла данных в OpenAI API
+    training_data = openai.File.create(
+        file=open('train_data.jsonl'),
+        purpose='fine-tune'  # Указываем цель (purpose) файла
+    )
+        
+    # Запускаем тонкую настройку модели
+    response = openai.FineTune.create(
+        training_file = training_data.id,
+        model = 'davinci',
+        suffix = model_id,
+        n_epochs=5
+    )
+    
+    # Выводим информацию о запущенной тонкой настройке
+    print(response)
     
     # Save the trained model
     
-    model.update(model_id=model_id)
+    #model.update(model_id=model_id)
            
     #status = model.retrieve(model_id)
     #print("Status: ", status)
@@ -220,7 +305,23 @@ def train_chat():
     
     print(f"Stop traning model {model_id}!")
     
+def train_status(fine_tune_id):
+    response = openai.FineTune.retrieve(fine_tune_id)
 
+    file_id = 'file-Eea7WAG9mf8KLs1sfK6JBgOi'
+    file_name = 'compiled_results.csv'
+
+    download_result_file(file_id, file_name)
+    # Вывод информации о статусе тонкой настройки
+    #print(response.status)
+    return response
+    
+def download_result_file(file_id, file_name):
+    response = openai.File.download(file_id)
+    with open(file_name, 'wb') as file:
+        file.write(response)
+    print(f"Файл {file_name} успешно загружен.")
+    
 def get_chat_id_list():
     # установка соединения WebSocket
     ws = websocket.create_connection("wss://api.openai.com/v1/engines/text-davinci-003/conversations/list/ws",
@@ -241,3 +342,22 @@ def get_chat_id_list():
         print(conversation_ids)
     else:
         print("Не удалось получить список сохраненных диалогов")
+
+def create_train_file():
+    # Get all messages from the database
+    messages = []
+    
+    for message_chain in MessageChain.objects.all():
+        messages.append([" Job title: " + message_chain.job_title + "\n" + ' Job description: ' + message_chain.job_description+ "\n\n###\n\n", ' Proposal: ' + message_chain.proposal_cover_letter + " &&&"])
+        #messages.append([" Job title: " + "\n" + ' Job description: ' + "\n\n###\n\n", ' Proposal: ' + "#END"])
+        
+    df = pd.DataFrame(messages, columns=['prompt', 'completion'])
+    
+    #create JSON file 
+    json_file = df.to_json (orient='records', lines=True) 
+
+    #export JSON file
+    with open('train_data.jsonl', 'w') as f:
+        f.write(json_file)
+    
+    print(df)
