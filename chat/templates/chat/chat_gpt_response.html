@@ -12,36 +12,97 @@
 <h2> GPT response </h2>
 <div class="conteiner-fluid mb-2 border">
 <form name="Chat GPT" method="POST" >
-  {% csrf_token %}
-  <div class="row mb-2">
+	{% csrf_token %}
+	<div class="row mb-2">
     
-	<div class="col">
-		<div class="row">&nbsp</div>
-		<div class="row ml-4">
-			{{ form.ask_field.label_tag }}
+		<div class="col">
+			<div class="row ml-4">
+				<div class="col">
+				
+					<div class="row ml-4">
+						{{ form.f_chat_name.label_tag }}
+					</div>
+					<div class="text_field row ml-4">
+						{{ form.f_chat_name }}
+					</div>
+					
+					<div class="row">&nbsp</div>
+					<div class="row ml-4">
+						{{ form.f_chat_field.label_tag }}
+					</div>
+					<div class="text_field row ml-4">
+						{{ form.f_chat_field|safe }}
+					</div>
+				
+					<div class="row">&nbsp</div>
+					<div class="row ml-4">
+						<div class="row ml-4">
+							{{ form.f_company.label_tag }}
+							
+							
+						</div>
+						<div class=" row ml-4">
+							{{ form.f_company }}
+							
+						</div>
+						
+						<div class="row ml-4">
+							
+							{{ form.f_subject.label_tag }}
+							
+						</div>
+						<div class=" row ml-4">
+							
+							{{ form.f_subject }}
+						</div>
+					</div>
+					
+					<div class="row ml-4">
+						{{ form.f_ask_field.label_tag }}
+					</div>
+					<div class="text_field row ml-4">
+						<pre>{{ form.f_ask_field|safe }}</pre>
+					</div>
+					
+					<div class="row mt-4 ml-4">
+						{% buttons submit="  Submit  " %} {% endbuttons %}
+					</div>
+				
+					{% if user.is_superuser %}
+						<div class="row ml-4">
+							{{ form.f_debug_field.label_tag }}
+						</div>
+						<div class="text_field row ml-4">
+							<pre>{{ form.f_debug_field|safe }}</pre>
+						</div>
+					{% endif %}
+				
+				</div>
+			</div>
 		</div>
-		<div class="text_field row ml-4">
-			<pre>{{ form.ask_field|safe }}</pre><br>
-		</div>
-		<div class="row">&nbsp</div>
-		<div class="row mt-4 ml-4">
-			{% buttons submit="  Submit  " %} {% endbuttons %}
-		</div>
-	</div>
-	
-	<div class="col">
-		<div class="row">&nbsp</div>
-		<div class="row ml-4">
-			{{ form.chat_field.label_tag }}
-		</div>
-		<div class="text_field row ml-4">
-			{{ form.chat_field|safe }}<br>
-		</div>
-		<div class="row">&nbsp</div>
-		
-	</div>
-  </div>
 
+		<div class="col mb-2 border">
+			<h2> Chat archive</h2>
+			
+
+			<table border="1" colspan="2" width="100%">
+				<col style="width:80%">
+				<col style="width:20%">
+				<tr>
+					<th>Chat name </th>
+					<th>Delete</th>
+				</tr>
+				{% for record in chat_list %}
+				<tr>
+					<td><a href="{% url 'chat:my_chat_gpt_id' id=record.id %}" style="text-decoration:None">{{record.chat_name }}</a></td>
+			  
+					<td align="center"><a href="{% url 'chat:my_del_chat' id=record.id %}" style="text-decoration:None">Delete</a></td>
+				</tr>
+				{% endfor %}  
+			</table>
+		</div>
+
+	</div>
 </form>
 </div>
 

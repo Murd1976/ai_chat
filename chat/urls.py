@@ -8,8 +8,14 @@ urlpatterns = [
     path('chat/', views.chat_home),
     #path('chat/gpt/', views.gpt_response, name= 'my_chat_gpt'),
     path('chat/gpt/', views.chat_page, name= 'my_chat_gpt'),
+    path('chat/gpt/<int:id>', views.chat_page, name= 'my_chat_gpt_id'),
+    
     path('chat/db/', views.load_base_page, name= 'my_load_base'),
+    path('chat/db/embedding', views.create_embedding_page, name= 'my_create_embedding'),
+    path('chat/db/chat', views.load_chat_data_page, name= 'my_load_chat'),
+    
     path('chat/db/train/', views.train_page, name= 'my_train_model'),
+    
     path('chat/db/train/status/', views.train_status_page, name= 'my_status_model'),
     path('chat/db/new/<int:id>/', views.new_proposal_page, name= 'my_new_proposal'),
     path('chat/db/new/', views.new_proposal_page, name= 'my_new_proposal'),
@@ -18,7 +24,7 @@ urlpatterns = [
     
     path('chat/db/edit/del/<int:id>/', views.delete_record_edit, name= 'my_del_record_edit'),
     path('chat/db/new/del/<int:id>/', views.delete_record_new, name= 'my_del_record_new'),
-    
+    path('chat/gpt/del/<int:id>/', views.delete_chat, name= 'my_del_chat'),
     
     
     path('accounts/register/activate/<str:sign>/', views.user_activate, name= 'my_register_activate'),

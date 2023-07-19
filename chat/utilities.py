@@ -54,3 +54,5 @@ def load_from_xls(f_name, user):
                     answer = data[a_str]
                 )
                 qa.save()
+
+#def load_from_chat(f_name, user):

@@ -28,7 +28,7 @@
               
           	</ul>
 			<ul class="col nav justify-content-end ">
-				{% if user.is_authenticated %}              
+				{% if user.is_authenticated %}
               	<li class= "nav-item dropdown">
                 	<a class= "nav-link dropdown-toggle" data-toggle= "dropdown" href= "#" role= "button" aria-haspopup= "true" aria-expanded= "false"> Profile </a>
 				
@@ -61,9 +61,12 @@
             	<ul>
 					<li class="nav-item root"><a class="nav-link" href="{% url 'chat:my_new_proposal' %}">New proposal</a></li>
 					<li class="nav-item root"><a class="nav-link" href="{% url 'chat:my_edit_proposal' id='0' %}">Edit proposal</a></li>
+					{% if user.is_superuser %}
 					<li class="nav-item root"><a class="nav-link" href="{% url 'chat:my_load_base' %}">Load data base</a></li>
+					<li class="nav-item root"><a class="nav-link" href="{% url 'chat:my_create_embedding' %}">Create embedding</a></li>
 					<li class="nav-item root"><a class="nav-link" href= "{% url 'chat:my_train_model' %}"> Train model </a></li>
 					<li class="nav-item root"><a class="nav-link" href= "{% url 'chat:my_status_model' %}"> Training status </a></li>
+					{% endif %}
             		<a class= "nav-link" href= "{% url 'chat:other' page='#' %}"> Other </a>
            	 		
             	</ul>  
@@ -78,7 +81,7 @@
           </section>
       	</div>
 		<footer class="mt-3">
-			<p class="text-right font-italic"> v2.3  &copy; Murd.</p>
+			<p class="text-right font-italic"> v3.0  &copy; Murd.</p>
 		</footer>
 		
 

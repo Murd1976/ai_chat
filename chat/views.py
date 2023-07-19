@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.template import TemplateDoesNotExist
 from django.template.loader import get_template
 from django.contrib import messages
@@ -26,6 +26,7 @@ import openai
 import requests
 from dotenv import load_dotenv
 import os
+from .ai_embedding import *
 
 class BBLoginView(LoginView):
     template_name = 'chat/chat_login.html'
@@ -107,17 +108,58 @@ def user_activate(request, sign):
         user.save()
     return render(request, template)# Create your views here.
 
+@login_required
+def create_embedding_page(request):
+
+    f_name = "train_data_ask.jsonl"
+    # папка базы данных
+    persist_directory = 'chat/db/CrisEmbeddingsChat/'
+    # путь к учебным материалам
+    data_directory = 'chat/db/Cris/'
+    #"chat/train_data_ask.jsonl"
+    system_doc = 'support_instruction.txt'
+    
+    if request.method == "POST":
+        userform = DbLoadForm(request.POST or None)
+        if userform.is_valid():
+            f_name = userform.cleaned_data["db_name"]
+            gptLearning = WorkerОpenAI(data_directory + system_doc, persist_directory)
+    
+            # # Подготовка эмбедингов
+            gptLearning.create_embedding(data_directory + f_name, # путь к учебным материалам
+                                        persist_directory) # путь для сохранения базы данных
+        
+    parts = DbLoadForm(initial= {"db_name":f_name})
+    template = 'chat/chat_create_embedding.html'
+    
+    context = {"form": parts, "user_name":request.user}
+    return render(request, template, context)
+    
+@login_required
+def load_chat_data_page(request):
+
+    f_name = "train_data_ask.jsonl"
+    if request.method == "POST":
+        userform = DbLoadForm(request.POST or None)
+        if userform.is_valid():
+            f_name = userform.cleaned_data["db_name"]
+            load_from_xls(f_name, request.user)
+    parts = DbLoadForm(initial= {"db_name":f_name})
+    template = 'chat/chat_load_chat_base.html'
+    chain_list = MessageChain.objects.filter(owner=request.user)
+
+    context = {"form": parts, "tests_log": chain_list, "user_name":request.user}
+    return render(request, template, context)
 
 @login_required
 def load_base_page(request):
-
     f_name = "chat/upwork_list.xlsx"
     if request.method == "POST":
         userform = DbLoadForm(request.POST or None)
         if userform.is_valid():
             f_name = userform.cleaned_data["db_name"]
             load_from_xls(f_name, request.user)
-    parts = DbLoadForm(initial= {"db_name":f_name})                
+    parts = DbLoadForm(initial= {"db_name":f_name})
     template = 'chat/chat_load_base.html'
     chain_list = MessageChain.objects.filter(owner=request.user)
 #    tests_list = AllBackTests.objects.all()
@@ -125,8 +167,6 @@ def load_base_page(request):
 #    tests_list = AllBackTests.objects.all()
     context = {"form": parts, "tests_log": chain_list, "user_name":request.user}
     return render(request, template, context)
-
-
 # Получаем ключ API
 #api_key = "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"
 
@@ -191,8 +231,16 @@ def delete_record_edit(request, id):
     except MessageChain.DoesNotExist:
         return HttpResponseNotFound("<h2>Record not found</h2>")
         
+# delete chat
+def delete_chat(request, id):
+    try:
+        test = ChatList.objects.get(id=id)
+        test.delete()
+        return redirect('chat:my_chat_gpt')
+    except MessageChain.DoesNotExist:
+        return HttpResponseNotFound("<h2>Record not found</h2>")
 
-def chat_page(request):
+def chat_page__(request):
     template = 'chat/chat_gpt_response.html'
         
     if request.method == "POST":
@@ -252,7 +300,148 @@ def chat_page(request):
     parts = ChatForm()
     context = {"form": parts}
     return render(request, template, context)
-  
+    
+def make_chat_name(query) -> str:
+    word_list = query.split()
+    name = ''
+    if (len(word_list) > 5):
+        for i in range(5):
+            name += ' ' + word_list[i]
+    else:
+        for i in range(len(word_list)):
+            name += ' ' + word_list[i]
+            
+    return name
+
+def chat_page(request, id = 0):
+    template = 'chat/chat_gpt_response.html'
+        
+    # папка базы данных
+    persist_directory = 'chat/db/CrisEmbeddingsChat/'
+    # путь к учебным материалам
+    data_directory = 'chat/db/Cris/'
+    #"chat/train_data_ask.jsonl"
+    system_doc = 'support_instruction.txt'
+    
+    gptLearning = WorkerОpenAI(data_directory + system_doc, persist_directory)
+    
+    chats = ChatList.objects.all()
+    
+    subject_list = [(0, "TPS - Contact Form"), (1, "PSC - Contact Form"), (2, "PSN - Contact Form")]
+    company_list = [(0, "PayStabs"), (1, "None")]
+    if request.method == "POST":
+        #text_buf = "Amswer: "
+        userform = ChatForm(request.POST or None)
+        #text_buf += dict(strategies_value)[str(userform.data.get("f_strategies"))]
+                
+        if userform.is_valid():
+            query = userform.cleaned_data["f_ask_field"]
+            chat_name = userform.cleaned_data["f_chat_name"]
+            
+            full_query = {}
+            full_query['company'] = dict(company_list)[int(userform.cleaned_data["f_company"])]
+            full_query['user_name'] = request.user.first_name
+            full_query['subject'] = dict(subject_list)[int(userform.cleaned_data["f_subject"])]
+            full_query['issue'] = query
+            
+            if(id > 0):
+                curr_chat = ChatList.objects.get(id=id)
+                res = ChatHistory.objects.filter(message=curr_chat)
+                question_history = []
+                for qa in res:
+                    if not (pd.isna(qa.user_question)):
+                        question_history.append(('\n' + qa.user_question, qa.ai_answer if qa.ai_answer is not None else ''))
+                        
+            response = gptLearning.answer_user_question(full_query, 1)
+            
+            if( id == 0):
+                # сохраняем ответ в базу данных
+                ChatList.objects.create(
+                    owner = request.user,
+                    chat_type = 'support',
+                    company = full_query['company'],
+                    chat_name = make_chat_name(query),
+                    subject = full_query['subject']
+                )
+                curr_chat = ChatList.objects.last()
+                # создаем новый чат для нового предложения и сохраняем в базу данных
+                ChatHistory.objects.create(
+                    message = curr_chat,
+                    user_question = query,
+                    ai_answer = response
+                )
+            else:
+                
+                # создаем новый чат для нового предложения и сохраняем в базу данных
+                ChatHistory.objects.create(
+                    message = curr_chat,
+                    user_question = query,
+                    ai_answer = response
+                )
+                
+            messages = ''
+            res = ChatHistory.objects.filter(message=curr_chat)
+                    
+            for qa in res:
+                if not (pd.isna(qa.user_question)):
+                    messages += '\n\n User: ' + qa.user_question + ' ' + '\n Assistant: \n' + (qa.ai_answer if qa.ai_answer is not None else '')
+            #print(messages)
+            '''
+            messages.extend(["\n Answer: \n", response.strip()])
+            st = ""
+            for buf in messages:
+                st += buf
+            history = ''
+            for q, a in question_history:
+                history += '\n\n User: ' + q + ' ' + '\n Assistant: \n' + (a if a is not None else '')
+            #print(gptLearning.debug_log)
+            '''
+            st = ""
+            for i in range(len(gptLearning.debug_log)):
+                st += str(gptLearning.debug_log[i])
+                
+            #parts = ChatForm(initial= {"f_chat_field":messages, "f_ask_field":query, 'f_debug_field':st})
+            #parts = ChatForm(initial= {"f_company":curr_chat.company, "f_subject":curr_chat.subject, "f_chat_name":curr_chat.chat_name, "f_chat_field":messages, 'f_debug_field':st})
+            #parts.fields['f_reports'].choices = reports_list
+            print(request.headers)
+            #if (id == 0):
+            #    id = curr_chat.id
+            #    request.headers['Referer'] = request.headers['Referer'] + str(id)
+            
+            #context = {"form": parts, "chat_list": chats}
+            #return render(request, template, context)
+            
+            # Формируем URL-адрес с параметром запроса
+            redirect_url = reverse('chat:my_chat_gpt_id', kwargs={'id': curr_chat.id})
+            redirect_url += f'?debug_field={st}'
+            return redirect(redirect_url)
+            #return redirect('chat:my_chat_gpt_id', id=curr_chat.id)
+        else:
+            return HttpResponse("Something was wrong...")
+            
+    messages = ''
+    if (id > 0): 
+        curr_chat = ChatList.objects.get(id=id)
+    else:
+    #    curr_chat = ChatList.objects.last()
+        curr_chat = None
+            
+    if (curr_chat == None):
+        parts = ChatForm()
+    else:
+        
+        res = ChatHistory.objects.filter(message=curr_chat)
+                    
+        for qa in res:
+            if not (pd.isna(qa.user_question)):
+                messages += '\n\n User: ' + qa.user_question + ' ' + '\n Assistant: \n' + (qa.ai_answer if qa.ai_answer is not None else '')
+        additional_data = request.GET.get('debug_field', None)
+        parts = ChatForm(initial= {"f_company":curr_chat.company, "f_subject":curr_chat.subject, "f_chat_name":curr_chat.chat_name, "f_chat_field":messages, 'f_debug_field':additional_data})
+
+    
+    context = {"form": parts, "chat_list": chats}
+    return render(request, template, context)
+    
 def new_proposal_page(request, id = 0):
     template = 'chat/chat_new_proposal.html'
     jobs = MessageChain.objects.all()

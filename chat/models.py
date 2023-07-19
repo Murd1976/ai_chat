@@ -2,7 +2,7 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 
-version = 2.00
+version = 3.00
 
 class AdvUser(AbstractUser):
     is_activated = models.BooleanField(default = True, db_index = True, verbose_name = 'Has been activated ?')
@@ -17,6 +17,10 @@ class ChatList(models.Model):
     chat_name = models.CharField(max_length=100)
     
     created_at = models.DateTimeField(auto_now_add=True, db_index=True, verbose_name='Message time.')
+    chat_type = models.CharField(max_length=30, default = 'none')
+    company = models.CharField(max_length=100, default = 'none')
+    subject = models.CharField(max_length=100, default = 'none')
+    status = models.CharField(max_length=30, default = 'open')
 
     def __str__(self):
         return f"ChatName: {self.chat_name}"

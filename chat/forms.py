@@ -61,8 +61,13 @@ class RegisterUserForm(forms.ModelForm):
         fields= ('username', 'email', 'password1', 'password2', 'first_name', 'last_name', 'send_messages')
         
 class ChatForm(forms.Form):
-    ask_field = forms.CharField(widget= forms.Textarea(attrs={'class':'text_field', 'rows':'8', 'cols':'70'}), disabled = False, required=True)
-    chat_field = forms.CharField(widget= forms.Textarea(attrs={'class':'text_field', 'rows':'15', 'cols':70}), disabled = False, required=False)
+    f_ask_field = forms.CharField(label = 'Ask field', widget= forms.Textarea(attrs={'class':'text_field', 'rows':'8', 'cols':'100'}), disabled = False, required=True)
+    f_chat_field = forms.CharField(label = 'Chat field',widget= forms.Textarea(attrs={'class':'text_field', 'rows':'15', 'cols':100}), disabled = False, required=False)
+    f_debug_field = forms.CharField(label = 'Debug field',widget= forms.Textarea(attrs={'class':'text_field', 'rows':'8', 'cols':'100'}), disabled = False, required=False)
+    f_subject = forms.ChoiceField(label="Select a subject:", initial=0, required= True, choices=((0, "TPS - Contact Form"), (1, "PSC - Contact Form"), (2, "PSN - Contact Form")))
+    f_company = forms.ChoiceField(label="Select a company:", initial=0, required= True, choices=((0, "PayStabs"), (1, "None")))
+    f_chat_name = forms.CharField(label="Chat name", initial = 'New', widget=forms.TextInput(attrs={'readonly': 'readonly', 'size': 50}))
+    
     
 class JobForm(forms.Form):
 
