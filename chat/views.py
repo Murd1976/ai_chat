@@ -312,7 +312,32 @@ def make_chat_name(query) -> str:
             name += ' ' + word_list[i]
             
     return name
-
+def chat_instruction(request):
+    template = 'chat/chat_gpt_instruction.html'
+    # путь к учебным материалам
+    data_directory = 'chat/db/Cris/'
+    system_doc = 'support_instruction.txt'
+    
+    if request.method == "POST":
+        #text_buf = "Amswer: "
+        userform = EditInstructionForm(request.POST or None)
+        #text_buf += dict(strategies_value)[str(userform.data.get("f_strategies"))]
+                
+        if userform.is_valid():
+            txt = userform.cleaned_data['f_chat_instruction']
+            print('\n', txt)
+            f = open(data_directory + system_doc, 'w')
+            f.write(txt)
+            f.close()
+            
+    with open(data_directory + system_doc, "r") as f:
+        text = f.read()
+    f.close()
+    
+    parts = EditInstructionForm(initial = {'f_chat_instruction': text})
+    context = {"form": parts}
+    return render(request, template, context)
+    
 def chat_page(request, id = 0):
     template = 'chat/chat_gpt_response.html'
         
@@ -323,7 +348,11 @@ def chat_page(request, id = 0):
     #"chat/train_data_ask.jsonl"
     system_doc = 'support_instruction.txt'
     
-    gptLearning = WorkerОpenAI(data_directory + system_doc, persist_directory)
+    try:
+        gptLearning = WorkerОpenAI(data_directory + system_doc, persist_directory)
+    except openai.OpenAIError as e:
+        #print(f'OpenAI API Error: {e}')
+        return HttpResponse(f'OpenAI API Error: {e}')
     
     chats = ChatList.objects.all()
     
@@ -337,6 +366,9 @@ def chat_page(request, id = 0):
         if userform.is_valid():
             query = userform.cleaned_data["f_ask_field"]
             chat_name = userform.cleaned_data["f_chat_name"]
+            tmp = float(userform.cleaned_data['f_chat_temp'])
+            print(f'\nTemperature: {tmp}\n')
+            
             
             full_query = {}
             full_query['company'] = dict(company_list)[int(userform.cleaned_data["f_company"])]
@@ -352,7 +384,11 @@ def chat_page(request, id = 0):
                     if not (pd.isna(qa.user_question)):
                         question_history.append(('\n' + qa.user_question, qa.ai_answer if qa.ai_answer is not None else ''))
                         
-            response = gptLearning.answer_user_question(full_query, 1)
+            try:
+                response = gptLearning.answer_user_question(full_query, temp = tmp, verbose = 1)
+            except openai.OpenAIError as e:
+                #print(f'OpenAI API Error: {e}')
+                return HttpResponse(f'OpenAI API Error: {e}')
             
             if( id == 0):
                 # сохраняем ответ в базу данных

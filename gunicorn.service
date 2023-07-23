@@ -1,0 +1,13 @@
+[Unit]
+Description=gunicorn daemon
+After=network.target
+
+[Service]
+
+User=root
+Group=www-data
+WorkingDirectory=/root/ai_chat/
+ExecStart=/root/ai_chat/.ai_env/bin/gunicorn --access-logfile - --error-logfile error.log --workers 2 --bind 212.127.94.75:80 ai_chat.wsgi:application
+
+[Install]
+WantedBy=multi-user.target

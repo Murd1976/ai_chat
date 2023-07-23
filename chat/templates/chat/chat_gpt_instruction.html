@@ -1,0 +1,42 @@
+{% extends "chat/chat_base.html" %}
+
+{% load static %}
+{% load bootstrap4 %}
+<head>
+{% block title %} GPT instruction {% endblock %}
+
+<link rel= "stylesheet" type= "text/css" href= "{% static 'my_css/chat_style.css' %}">
+
+</head>
+{% block content %}
+<h2> GPT Instruction </h2>
+<div class="conteiner-fluid mb-2 border">
+<form name="Chat GPT Instruction" method="POST" >
+	{% csrf_token %}
+	<div class="row mb-2">
+    
+		<div class="col">
+			<div class="row ml-4">
+				<div class="col">
+				
+					<div class="row">&nbsp</div>
+					<div class="row ml-4">
+						{{ form.f_chat_instruction.label_tag }}
+					</div>
+					<div class="text_field row ml-4">
+						{{ form.f_chat_instruction|safe }}
+					</div>
+					
+					<div class="row mt-4 ml-4">
+						{% buttons submit="  Submit  " %} {% endbuttons %}
+					</div>
+					
+				</div>
+			</div>
+		</div>
+		
+	</div>
+</form>
+</div>
+
+{% endblock %}

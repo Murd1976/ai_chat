@@ -2,7 +2,7 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 
-version = 3.00
+version = 3.2
 
 class AdvUser(AbstractUser):
     is_activated = models.BooleanField(default = True, db_index = True, verbose_name = 'Has been activated ?')

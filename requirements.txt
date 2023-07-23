@@ -1,9 +1,10 @@
 #for django main progect
-virtualenv .ai_env
-source .ai_env/bin/activate
+#virtualenv .ai_env
+#source .ai_env/bin/activate
 
 django
 djangorestframework 
+websocket
 django-bootstrap4
 djangocms-admin-style
 pandas
@@ -11,11 +12,14 @@ python-dotenv
 openai
 openpyxl
 
+tiktoken
 langchain 
-openai 
 chromadb
 gspread 
 oauth2client
+
+gunicorn
+psycopg2
 
 celery
 celery-progress

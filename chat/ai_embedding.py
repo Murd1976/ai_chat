@@ -25,6 +25,7 @@ logging.getLogger("chromadb").setLevel(logging.ERROR)
 import openai
 import tiktoken
 import copy
+from dotenv import load_dotenv
 
 class bcolors:
     HEADER = '\033[95m'
@@ -42,11 +43,9 @@ persist_directory = '/content/drive/MyDrive/ColabNotebooks/ChatGPT/DB/CrisEmbedd
 # путь к учебным материалам
 data_directory = '/content/drive/MyDrive/ColabNotebooks/ChatGPT/DB/Cris/'
 
-os.environ["OPENAI_API_KEY"] = "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"
-openai.api_key = "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"
-
-#os.environ["OPENAI_API_KEY"] = "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"
-#openai.api_key = "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"
+# Authenticate OpenAI API
+load_dotenv()
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 question_history = []
 
@@ -146,25 +145,25 @@ class WorkerОpenAI():
     #print('G_Size: ', self.source_chunks[2])
     for i in range(len(self.source_chunks)):
       self.db.add_documents(documents=self.source_chunks[i])
-      #print('sSize: ', len(self.source_chunks[i]))
-      self.debug_log.append('sSize: ' + len(self.source_chunks[i]))
+      print('sSize: ', len(self.source_chunks[i]))
+      self.debug_log.append('sSize: ' + str(len(self.source_chunks[i])))
       count_token += num_tokens_from_string(' '.join([x.page_content for x in self.source_chunks[i]]), "cl100k_base")
-      #print(i, 'Counter: ', count_token)
-      self.debug_log.append(i + 'Counter: ' + count_token)
+      print(i, 'Counter: ', count_token)
+      self.debug_log.append(str(i) + 'Counter: ' + str(count_token))
       time.sleep(77)
     self.db.persist()
     
     f = open(persist_directory + 'embedding_info.inf', 'w')
     f.write(str(datetime.now()))
     f.close()
-    '''
+    
     print('\n ===========================================: \n')
     print('Number of tokens in source document: ', count_token)
     print('Request price: ', 0.0004*(count_token/1000), ' $ \n')
     print('\n ===========================================')
-    '''
+    
     self.debug_log.append('\n ===========================================: \n')
-    self.debug_log.append('Number of tokens in source document: ' + count_token + '\n')
+    self.debug_log.append('Number of tokens in source document: ' + str(count_token) + '\n')
     self.debug_log.append('Request price: ' + str(0.0004*(count_token/1000)) + ' $ \n')
     self.debug_log.append('\n =========================================== \n')
 
@@ -275,9 +274,9 @@ class WorkerОpenAI():
       docs = search_index.similarity_search(topic, k=5)
       
       if verbose: 
-        #print('\n ===========================================: ')
+        print('\n ===========================================: ')
         message_content = re.sub(r'\n{2}', ' ', '\n '.join([f'\nText №{i+1}\n=====================' + doc.page_content + '\n' for i, doc in enumerate(docs)]))
-        #print('message_content :\n ======================================== \n', message_content)
+        print('message_content :\n ======================================== \n', message_content)
         
         #self.debug_log.append('\n ===========================================: \n')
         #self.debug_log.append('message_content :\n ======================================== \n' + message_content)
@@ -352,7 +351,7 @@ class WorkerОpenAI():
 
       return completion.choices[0].message.content
 
-  def answer_user_question(self, user_question, verbose = 0) -> str:
+  def answer_user_question(self, user_question, temp = 0.5, verbose = 0) -> str:
 
       #knowledge_base_text = load_document_text(knowledge_base_url)
 
@@ -371,7 +370,7 @@ class WorkerОpenAI():
       input_text =summarized_history + f'"prompt":" Company: {user_question["company"]}\n User name: {user_question["user_name"]}\n Subject": {user_question["subject"]}\n"' + "\n\n Сurrent issue: " + user_question['issue']
 
       # Извлечение наиболее похожих отрезков текста из базы знаний и получение ответа модели
-      answer_text = self.answer_index(self.chat_manager_system, input_text, self.db, temp=0.5, verbose = verbose)
+      answer_text = self.answer_index(self.chat_manager_system, input_text, self.db, temp=temp, verbose = verbose)
 
       # Добавляем вопрос пользователя и ответ системы в историю
       tt = datetime.now().strftime('%m/%d/%Y %H:%M:%S')

@@ -9,6 +9,7 @@ urlpatterns = [
     #path('chat/gpt/', views.gpt_response, name= 'my_chat_gpt'),
     path('chat/gpt/', views.chat_page, name= 'my_chat_gpt'),
     path('chat/gpt/<int:id>', views.chat_page, name= 'my_chat_gpt_id'),
+    path('chat/gpt/instruction/', views.chat_instruction, name= 'my_chat_gpt_instruction'),
     
     path('chat/db/', views.load_base_page, name= 'my_load_base'),
     path('chat/db/embedding', views.create_embedding_page, name= 'my_create_embedding'),

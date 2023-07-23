@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from .models import AdvUser
 from .apps import user_registered
 
-version = 2.3
+version = 3.2
 
 class UserForm(forms.Form):
     name = forms.CharField()
@@ -68,6 +68,8 @@ class ChatForm(forms.Form):
     f_company = forms.ChoiceField(label="Select a company:", initial=0, required= True, choices=((0, "PayStabs"), (1, "None")))
     f_chat_name = forms.CharField(label="Chat name", initial = 'New', widget=forms.TextInput(attrs={'readonly': 'readonly', 'size': 50}))
     
+    f_chat_temp = forms.DecimalField(label="Temperature:", min_value=0, max_value=1, initial=0.5, decimal_places=1, widget=forms.NumberInput( attrs={'size':'3'}), required=False)
+    
     
 class JobForm(forms.Form):
 
@@ -75,6 +77,10 @@ class JobForm(forms.Form):
     f_job_description = forms.CharField(label="Job description", widget= forms.Textarea(attrs={'class':'text_field', 'rows':'8', 'cols':'80'}), disabled = False, required=True)
     f_propose = forms.CharField(label="Proposal", widget= forms.Textarea(attrs={'class':'text_field', 'rows':'15', 'cols':'80'}), disabled = False, required=False)
     f_model = forms.ChoiceField(label="Select an AI model:", initial=0, required= True, choices=((0, "text-davinci-003"), (1, "gpt-3.5-turbo")))
+    
+class EditInstructionForm(forms.Form):
+
+    f_chat_instruction = forms.CharField(label="Instruction", widget= forms.Textarea(attrs={'class':'text_field', 'rows':'15', 'cols':'80'}), disabled = False, required=True)
     
 class EditJobForm(forms.Form):
 
