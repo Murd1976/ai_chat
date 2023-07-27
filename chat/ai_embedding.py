@@ -498,14 +498,14 @@ class WorkerОpenAIProposal():
     f.write(str(datetime.now()))
     f.close()
     
-    print('\n ===========================================: \n')
-    print('Number of tokens in source document: ', count_token)
-    print('Request price: ', 0.0004*(count_token/1000), ' $ \n')
+    print('\n ===========================================:')
+    print('\n Number of tokens in source document: ', count_token)
+    print('\n Request price: ', 0.0004*(count_token/1000), ' $')
     print('\n ===========================================')
     
-    self.debug_log.append('\n ===========================================: \n')
-    self.debug_log.append('Number of tokens in source document: ' + str(count_token) + '\n')
-    self.debug_log.append('Request price: ' + str(0.0004*(count_token/1000)) + ' $ \n')
+    self.debug_log.append('\n ===========================================: ')
+    self.debug_log.append('\n Number of tokens in source document: ' + str(count_token))
+    self.debug_log.append('\n Request price: ' + str(0.0004*(count_token/1000)) + ' $')
     self.debug_log.append('\n =========================================== \n')
 
 
@@ -569,17 +569,17 @@ class WorkerОpenAIProposal():
       messages=messages,
       temperature=temp
       )
+      answer = self.insert_newlines(completion.choices[0].message.content)
       if verbose:
-          self.debug_log.append('===========================================: ')
-          self.debug_log.append(f'{completion["usage"]["total_tokens"]} токенов использовано всего (вопрос-ответ).')
-          self.debug_log.append('===========================================: ')
-          self.debug_log.append('ЦЕНА запроса с ответом :' + str(0.002*(completion["usage"]["total_tokens"]/1000)) + ' $')
-          self.debug_log.append('===========================================: \n')
+          self.debug_log.append('\n ===========================================: ')
+          self.debug_log.append(f'\n {completion["usage"]["total_tokens"]} total tokens used (question-answer). ')
+          self.debug_log.append('\n ===========================================: ')
+          self.debug_log.append('\n Request price with response :' + str(round(0.002*(completion["usage"]["total_tokens"]/1000), 5)) + ' $ ')
+          self.debug_log.append('\n ===========================================: \n')
           #self.debug_log.append('Ответ ChatGPT: ')
           #self.debug_log.append(completion.choices[0].message.content)
-    except:
-      self.debug_log.append("Эта модель в настоящее время перегружена. Попробуйте позже.")
-      
-    answer = self.insert_newlines(completion.choices[0].message.content)
-      
+    except openai.OpenAIError as e:
+      self.debug_log.append(f'OpenAI API Error: {e}')
+      answer = f'OpenAI API Error: {e}'
+            
     return answer  # возвращает ответ
