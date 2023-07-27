@@ -54,7 +54,8 @@
           <nav class= "col-md-auto nav flex-column border">
             {% if user.is_authenticated %}
             <li class="nav-item root"><a class="nav-link" href="{% url 'chat:my_chat_gpt' %}">Chat</a></li>
-			<li class="nav-item root"><a class="nav-link" href="{% url 'chat:my_chat_gpt_instruction' %}">Set instruction</a></li>
+			<li class="nav-item root"><a class="nav-link" href="{% url 'chat:my_chat_gpt_instruction' %}">Set chat instruction</a></li>
+			<li class="nav-item root"><a class="nav-link" href="{% url 'chat:my_prop_gpt_instruction' %}">Set prop instruction</a></li>
 			            
             <span class= "nav-link root font-weight-bold"> Data base </span>
             	<ul>
@@ -63,7 +64,8 @@
 					
 					{% if user.is_superuser %}
 					<li class="nav-item root"><a class="nav-link" href="{% url 'chat:my_load_base' %}">Load data base</a></li>
-					<li class="nav-item root"><a class="nav-link" href="{% url 'chat:my_create_embedding' %}">Create embedding</a></li>
+					<li class="nav-item root"><a class="nav-link" href="{% url 'chat:my_create_chat_embedding' %}">Create chat embedding</a></li>
+					<li class="nav-item root"><a class="nav-link" href="{% url 'chat:my_create_prop_embedding' %}">Create prop embedding</a></li>
 					<li class="nav-item root"><a class="nav-link" href= "{% url 'chat:my_train_model' %}"> Train model </a></li>
 					<li class="nav-item root"><a class="nav-link" href= "{% url 'chat:my_status_model' %}"> Training status </a></li>
 					{% endif %}
@@ -81,7 +83,7 @@
           </section>
       	</div>
 		<footer class="mt-3">
-			<p class="text-right font-italic"> v3.2  &copy; Murd.</p>
+			<p class="text-right font-italic"> v3.3  &copy; Murd.</p>
 		</footer>
 		
 

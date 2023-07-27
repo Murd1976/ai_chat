@@ -28,6 +28,7 @@ from dotenv import load_dotenv
 import os
 from .ai_embedding import *
 
+
 class BBLoginView(LoginView):
     template_name = 'chat/chat_login.html'
     
@@ -109,7 +110,7 @@ def user_activate(request, sign):
     return render(request, template)# Create your views here.
 
 @login_required
-def create_embedding_page(request):
+def create_chat_embedding_page(request):
 
     f_name = "train_data_ask.jsonl"
     # папка базы данных
@@ -130,6 +131,34 @@ def create_embedding_page(request):
                                         persist_directory) # путь для сохранения базы данных
         
     parts = DbLoadForm(initial= {"db_name":f_name})
+    template = 'chat/chat_create_embedding.html'
+    
+    context = {"form": parts, "user_name":request.user}
+    return render(request, template, context)
+    
+@login_required
+def create_prop_embedding_page(request):
+
+    #f_name = "train_data_ask.jsonl"
+    # папка базы данных
+    #persist_directory = 'chat/db/CrisEmbeddingsProposal/'
+    # путь к учебным материалам
+    #data_directory = 'chat/db/CrisProposal/'
+    #"chat/train_data_ask.jsonl"
+    #system_doc = 'support_instruction.txt'
+    gptLearning = WorkerОpenAIProposal(WorkerОpenAIProposal.data_directory_prop + WorkerОpenAIProposal.system_doc_prop, WorkerОpenAIProposal.persist_directory_prop)
+    
+    if request.method == "POST":
+        userform = DbLoadForm(request.POST or None)
+        if userform.is_valid():
+            f_name = userform.cleaned_data["db_name"]
+            
+    
+            # # Подготовка эмбедингов
+            gptLearning.create_embedding(gptLearning.data_directory_prop + f_name, # путь к учебным материалам
+                                        gptLearning.persist_directory_prop) # путь для сохранения базы данных
+        
+    parts = DbLoadForm(initial= {"db_name":gptLearning.db_proposal_file})
     template = 'chat/chat_create_embedding.html'
     
     context = {"form": parts, "user_name":request.user}
@@ -220,7 +249,9 @@ def delete_record_new(request, id):
         test.delete()
         return redirect('chat:my_new_proposal')
     except MessageChain.DoesNotExist:
-        return HttpResponseNotFound("<h2>Record not found</h2>")
+        template = 'chat/chat_msg_page.html'
+        context = {"my_msg":"<h2>Record not found</h2>"}
+        return render(request, template, context)
 
 # delete record
 def delete_record_edit(request, id):
@@ -229,7 +260,9 @@ def delete_record_edit(request, id):
         test.delete()
         return redirect('chat:my_edit_proposal')
     except MessageChain.DoesNotExist:
-        return HttpResponseNotFound("<h2>Record not found</h2>")
+        template = 'chat/chat_msg_page.html'
+        context = {"my_msg":"<h2>Record not found</h2>"}
+        return render(request, template, context)
         
 # delete chat
 def delete_chat(request, id):
@@ -238,7 +271,10 @@ def delete_chat(request, id):
         test.delete()
         return redirect('chat:my_chat_gpt')
     except MessageChain.DoesNotExist:
-        return HttpResponseNotFound("<h2>Record not found</h2>")
+        template = 'chat/chat_msg_page.html'
+        context = {"my_msg":"<h2>Record not found</h2>"}
+        return render(request, template, context)
+       
 
 def chat_page__(request):
     template = 'chat/chat_gpt_response.html'
@@ -338,6 +374,32 @@ def chat_instruction(request):
     context = {"form": parts}
     return render(request, template, context)
     
+def prop_instruction(request):
+    template = 'chat/chat_gpt_instruction.html'
+    # путь к учебным материалам
+    data_directory = 'chat/db/CrisProposal/'
+    system_doc = 'proposal_instruction.txt'
+    
+    if request.method == "POST":
+        #text_buf = "Amswer: "
+        userform = EditInstructionForm(request.POST or None)
+        #text_buf += dict(strategies_value)[str(userform.data.get("f_strategies"))]
+                
+        if userform.is_valid():
+            txt = userform.cleaned_data['f_chat_instruction']
+            print('\n', txt)
+            f = open(data_directory + system_doc, 'w')
+            f.write(txt)
+            f.close()
+            
+    with open(data_directory + system_doc, "r") as f:
+        text = f.read()
+    f.close()
+    
+    parts = EditInstructionForm(initial = {'f_chat_instruction': text})
+    context = {"form": parts}
+    return render(request, template, context)
+    
 def chat_page(request, id = 0):
     template = 'chat/chat_gpt_response.html'
         
@@ -349,10 +411,11 @@ def chat_page(request, id = 0):
     system_doc = 'support_instruction.txt'
     
     try:
-        gptLearning = WorkerОpenAI(data_directory + system_doc, persist_directory)
+        gptLearning = WorkerОpenAIChat(data_directory + system_doc, persist_directory)
     except openai.OpenAIError as e:
-        #print(f'OpenAI API Error: {e}')
-        return HttpResponse(f'OpenAI API Error: {e}')
+        template = 'chat/chat_msg_page.html'
+        context = {"my_msg":f'OpenAI API Error: {e}'}
+        return render(request, template, context)
     
     chats = ChatList.objects.all()
     
@@ -387,8 +450,9 @@ def chat_page(request, id = 0):
             try:
                 response = gptLearning.answer_user_question(full_query, temp = tmp, verbose = 1)
             except openai.OpenAIError as e:
-                #print(f'OpenAI API Error: {e}')
-                return HttpResponse(f'OpenAI API Error: {e}')
+                template = 'chat/chat_msg_page.html'
+                context = {"my_msg":f'OpenAI API Error: {e}'}
+                return render(request, template, context)
             
             if( id == 0):
                 # сохраняем ответ в базу данных
@@ -453,7 +517,9 @@ def chat_page(request, id = 0):
             return redirect(redirect_url)
             #return redirect('chat:my_chat_gpt_id', id=curr_chat.id)
         else:
-            return HttpResponse("Something was wrong...")
+            template = 'chat/chat_msg_page.html'
+            context = {"my_msg":"Something was wrong..."}
+            return render(request, template, context)
             
     messages = ''
     if (id > 0): 
@@ -478,8 +544,212 @@ def chat_page(request, id = 0):
     context = {"form": parts, "chat_list": chats}
     return render(request, template, context)
     
+def new_em_proposal_page(request, id = 0):
+    template = 'chat/chat_new_proposal.html'
+    
+               
+    jobs = MessageChain.objects.all()
+    models = [(0, 'gpt-3.5-turbo-0301'), (1, 'text-davinci-003')]
+    if request.method == "POST":
+        
+        userform = JobForm(request.POST or None)
+                
+        if userform.is_valid():
+            sys_msg = " You are an assistant who creates a proposal cover letter for new job offers."
+            query_text = " Create new proposal cover letter for job title and job description below.:\n\n" 
+                        
+            j_title = userform.cleaned_data["f_job_title"] 
+            j_description = userform.cleaned_data["f_job_description"]
+            curr_model = dict(models)[int(userform.cleaned_data["f_model"])]
+            tmp = float(userform.cleaned_data['f_chat_temp'])
+            #print(f"\n Current model: {curr_model} \n")
+                       
+            try:
+                gptLearning = WorkerОpenAIProposal(WorkerОpenAIProposal.data_directory_prop + WorkerОpenAIProposal.system_doc_prop, WorkerОpenAIProposal.persist_directory_prop, curr_model)
+            except openai.OpenAIError as e:
+                template = 'chat/chat_msg_page.html'
+                context = {"my_msg":f'OpenAI API Error: {e}'}
+                return render(request, template, context)
+                        
+            query = f" Job title: {j_title}\n\n Job description: {j_description}\n"
+            
+            try:
+                response = gptLearning.get_gpt_proposal(query, temp = tmp, verbose = 1)
+            except openai.OpenAIError as e:
+                template = 'chat/chat_msg_page.html'
+                context = {"my_msg":f'OpenAI API Error: {e}'}
+                return render(request, template, context)
+            
+            # сохраняем ответ в базу данных
+            MessageChain.objects.create(
+                owner = request.user,
+                job_title = j_title,
+                job_description = j_description,
+                #proposal_cover_letter = response.strip(),
+                proposal_cover_letter = response,
+                chat_interview = ""
+            )
+            
+            # создаем новый чат для нового предложения и сохраняем в базу данных
+            ProposalHistory.objects.create(
+                message_chain = MessageChain.objects.last(),
+                user_question = query,
+                #ai_answer = response.strip()
+                ai_answer = response
+            )
+                                    
+            st = ""
+            for i in range(len(gptLearning.debug_log)):
+                st += str(gptLearning.debug_log[i])
+                                    
+            parts = JobForm(initial= {"f_job_title":j_title, "f_job_description":j_description, "f_propose":response, "f_debug_field":st})
+                        
+            context = {"form": parts, "jobs": jobs}
+            return render(request, template, context)
+        else:
+            template = 'chat/chat_msg_page.html'
+            context = {"my_msg":"Something was wrong..."}
+            return render(request, template, context)
+            
+    
+    if (id > 0): 
+        curr_job_chain = MessageChain.objects.get(id=id)
+    else:
+        curr_job_chain = MessageChain.objects.last()
+            
+    if (curr_job_chain == None):
+        parts = JobForm()
+    else:
+        
+        parts = JobForm(initial= {"f_job_title":curr_job_chain.job_title, "f_job_description":curr_job_chain.job_description, "f_propose":curr_job_chain.proposal_cover_letter})
+        
+    context = {"form": parts, "jobs": jobs}
+    return render(request, template, context)
+    
+def edit_em_proposal_page(request, id = 0):
+    template = 'chat/chat_edit_proposal.html'
+    jobs = MessageChain.objects.all()
+    models = [(0, 'gpt-3.5-turbo-0301'), (1, 'text-davinci-003')]
+           
+    if request.method == "POST":
+        
+        userform = EditJobForm(request.POST or None)
+        
+        if userform.is_valid():
+            #query = [] 
+            sys_msg = "You are an assistant who, based on the user's comments, edits the current Proposal for new job offers."
+            if(id == 0): 
+                template = 'chat/chat_msg_page.html'
+                context = {"my_msg":"First you need to select an entry!"}
+                return render(request, template, context)
+            
+            j_feedback = userform.cleaned_data["f_feedback"]
+            #curr_job_chain = MessageChain.objects.filter(owner = request.user).get(id = id)
+            curr_job_chain = MessageChain.objects.get(id = id)
+            curr_model = dict(models)[int(userform.cleaned_data["f_model"])]
+            tmp = float(userform.cleaned_data['f_chat_temp'])
+                        
+            
+            try:
+                gptLearning = WorkerОpenAIProposal(WorkerОpenAIProposal.data_directory_prop + WorkerОpenAIProposal.system_doc_prop, WorkerОpenAIProposal.persist_directory_prop, curr_model)
+            except openai.OpenAIError as e:
+                template = 'chat/chat_msg_page.html'
+                context = {"my_msg":f'OpenAI API Error: {e}'}
+                return render(request, template, context)
+                        
+            query = f" FeedBack: {j_feedback} Job title: {curr_job_chain.job_title}\n\n Job description: {curr_job_chain.job_description}\n\n Proposal: {curr_job_chain.proposal_cover_letter}\n"
+            
+            try:
+                response = gptLearning.get_gpt_proposal(query, temp = tmp, verbose = 1)
+            except openai.OpenAIError as e:
+                template = 'chat/chat_msg_page.html'
+                context = {"my_msg":f'OpenAI API Error: {e}'}
+                return render(request, template, context)
+            
+            curr_job_chain.proposal_cover_letter = response.strip()
+            curr_job_chain.save(update_fields=["proposal_cover_letter"])
+            
+            # создаем новую запись в чате для текущего предложения
+            ProposalHistory.objects.create(
+                message_chain = curr_job_chain,
+                user_question = query,
+                ai_answer = response.strip()
+            )
+            #print(response)
+            '''
+            # сохраняем ответ в базу данных
+            MessageChain.objects.create(
+                owner = request.user,
+                job_title = j_title,
+                job_description = j_description,
+                proposal_cover_letter = response.strip(),
+                chat_interview = ""
+            )
+            '''                        
+            
+            messages = []
+            res = ProposalHistory.objects.filter(message_chain=curr_job_chain)
+        
+            if(len(res) == 0):
+                messages.extend(curr_job_chain.proposal_cover_letter)
+            else:
+                for qa in res:
+                    if not (pd.isna(qa.user_question)):
+                        messages.extend(["\n ______________________________________________________ \n", qa.user_question, "\n ______________________________________________________ \n", qa.ai_answer])
+                
+            st = ""
+            for buf in messages:
+                st += buf
+                
+            st2 = ""
+            for i in range(len(gptLearning.debug_log)):
+                st2 += str(gptLearning.debug_log[i])
+                                    
+            
+            parts = EditJobForm(initial= {"f_content":st, "f_debug_field":st2})
+
+            
+            #parts = EditJobForm(initial= {"f_content":response.strip()})
+                        
+            context = {"form": parts, "jobs": jobs}
+            return render(request, template, context)
+        else:
+            template = 'chat/chat_msg_page.html'
+            context = {"my_msg":"Something was wrong..."}
+            return render(request, template, context)
+            
+    if (id > 0): 
+        curr_job_chain = MessageChain.objects.get(id=id)
+    else:
+        curr_job_chain = MessageChain.objects.last()
+      
+    if (curr_job_chain == None):
+        parts = JobForm()
+    else:
+        #query = []
+        #query.extend([curr_job_chain.proposal_cover_letter])
+        messages = []
+        res = ProposalHistory.objects.filter(message_chain=curr_job_chain)
+        
+        if(len(res) == 0):
+            messages.extend(curr_job_chain.proposal_cover_letter)
+        else:
+            for qa in res:
+                if not (pd.isna(qa.user_question)):
+                    messages.extend(["\n ______________________________________________________ \n", qa.user_question, "\n ______________________________________________________ \n", qa.ai_answer])
+        #parts = JobForm(initial= {"f_job_title":curr_job_chain.job_title, "f_job_description":curr_job_chain.job_description, "f_propose":messages})
+        
+        st = ""
+        for buf in messages:
+            st += buf
+        parts = EditJobForm(initial= {"f_content":st})
+        
+    context = {"form": parts, "jobs": jobs}
+    return render(request, template, context)
+    
 def new_proposal_page(request, id = 0):
     template = 'chat/chat_new_proposal.html'
+            
     jobs = MessageChain.objects.all()
     models = [(0, 'text-davinci-003'), (1, 'gpt-3.5-turbo')]
     if request.method == "POST":

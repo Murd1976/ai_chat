@@ -14,3 +14,4 @@ reports/
 /chat/migrations/
 
 /chat/db/CrisEmbeddingsChat/
+/chat/db/CrisEmbeddingsProposal/
