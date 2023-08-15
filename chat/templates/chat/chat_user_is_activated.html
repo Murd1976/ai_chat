@@ -1,0 +1,9 @@
+{% extends "chat/chat_base.html" %}
+
+{% block title %} User already activated {% endblock %}
+
+{% block content %}
+<h2> Activation </h2>
+<p> A user with the same name has already been activated! </p>
+<p> <a href="{% url 'chat:my_login' %}"> Sign in </a> </p>
+{% endblock %}

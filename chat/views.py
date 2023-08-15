@@ -18,7 +18,7 @@ from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotFound
 
 from .forms import *
 from .models import *
-from .utilities import load_from_xls
+from .utilities import signer, load_from_xls
 from .ai_train import *
 
 import pandas as pd
@@ -95,6 +95,7 @@ def user_profile(request):
 
 def user_activate(request, sign):
     try:
+        
         username = signer.unsign(sign)
     except BadSignature:
         return render(request, 'chat/chat_bad_signature.html')
@@ -141,12 +142,18 @@ def create_prop_embedding_page(request):
 
     #f_name = "train_data_ask.jsonl"
     # папка базы данных
-    #persist_directory = 'chat/db/CrisEmbeddingsProposal/'
+    #persist_directory = 'chat/db/MagicVap'
+    persist_directory = 'chat/db/MagicVap'
     # путь к учебным материалам
-    #data_directory = 'chat/db/CrisProposal/'
+    #data_directory = 'chat/db/MagicVap/'
+    data_directory = 'chat/db/MagicVap/'
     #"chat/train_data_ask.jsonl"
     #system_doc = 'support_instruction.txt'
-    gptLearning = WorkerОpenAIProposal(WorkerОpenAIProposal.data_directory_prop + WorkerОpenAIProposal.system_doc_prop, WorkerОpenAIProposal.persist_directory_prop)
+    company_dir = 'Maxximize/'
+    #gptLearning = WorkerОpenAIProposal(WorkerОpenAIProposal.data_directory_prop + 'train_data_jobs.jsonl', WorkerОpenAIProposal.persist_directory_prop)
+    gptLearning = WorkerОpenAIProposal('', company_dir)
+    #gptLearning.db_proposal_file = 'train_data_jobs.jsonl'
+    gptLearning.db_proposal_file = '*.*'
     
     if request.method == "POST":
         userform = DbLoadForm(request.POST or None)
@@ -155,8 +162,8 @@ def create_prop_embedding_page(request):
             
     
             # # Подготовка эмбедингов
-            gptLearning.create_embedding(gptLearning.data_directory_prop + f_name, # путь к учебным материалам
-                                        gptLearning.persist_directory_prop) # путь для сохранения базы данных
+            gptLearning.create_embedding(gptLearning.data_directory, # путь к учебным материалам
+                                        gptLearning.persist_directory) # путь для сохранения базы данных
         
     parts = DbLoadForm(initial= {"db_name":gptLearning.db_proposal_file})
     template = 'chat/chat_create_embedding.html'
@@ -196,15 +203,13 @@ def load_base_page(request):
 #    tests_list = AllBackTests.objects.all()
     context = {"form": parts, "tests_log": chain_list, "user_name":request.user}
     return render(request, template, context)
-# Получаем ключ API
-#api_key = "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"
 
-# Инициализируем OpenAI
-#openai = OpenAI(api_key)
-
-#openai.api_key = api_key
-
-
+def load_web_page(request):
+    res_f_name = 'magicvaporizers.txt'
+    my_url = "https://magicvaporizers.co.uk"
+    
+    scrape_site(my_url, res_f_name)
+    
 # Функция для обработки формы диалога
 def gpt_response(request):
     # Получаем ответ от ChatGPT
@@ -220,7 +225,7 @@ def gpt_response(request):
     
 def train_page(request):
     #train_chat()
-    
+    create_train_file()
     context = {"train_res": "Training of model complited!"}
     return render(request, "chat/chat_train_model.html", context)
     
@@ -351,7 +356,9 @@ def make_chat_name(query) -> str:
 def chat_instruction(request):
     template = 'chat/chat_gpt_instruction.html'
     # путь к учебным материалам
-    data_directory = 'chat/db/Cris/'
+    #data_directory = 'chat/db/Cris/'
+    #data_directory = 'chat/db/MagicVap_sys/'
+    data_directory = 'chat/db/chat/sys/Maxximize/'
     system_doc = 'support_instruction.txt'
     
     if request.method == "POST":
@@ -365,10 +372,12 @@ def chat_instruction(request):
             f = open(data_directory + system_doc, 'w')
             f.write(txt)
             f.close()
-            
-    with open(data_directory + system_doc, "r") as f:
-        text = f.read()
-    f.close()
+    try:
+        with open(data_directory + system_doc, "r") as f:
+            text = f.read()
+        f.close()
+    except:
+        text = "Instruction not found."
     
     parts = EditInstructionForm(initial = {'f_chat_instruction': text})
     context = {"form": parts}
@@ -377,7 +386,10 @@ def chat_instruction(request):
 def prop_instruction(request):
     template = 'chat/chat_gpt_instruction.html'
     # путь к учебным материалам
-    data_directory = 'chat/db/CrisProposal/'
+    #data_directory = 'chat/db/CrisProposal/'
+    #data_directory = 'chat/db/MagicVap_sys/'
+    data_directory = 'chat/db/proposal/sys/Maxximize/'
+
     system_doc = 'proposal_instruction.txt'
     
     if request.method == "POST":
@@ -392,9 +404,12 @@ def prop_instruction(request):
             f.write(txt)
             f.close()
             
-    with open(data_directory + system_doc, "r") as f:
-        text = f.read()
-    f.close()
+    try:
+        with open(data_directory + system_doc, "r") as f:
+            text = f.read()
+        f.close()
+    except:
+        text = "Instruction not found."
     
     parts = EditInstructionForm(initial = {'f_chat_instruction': text})
     context = {"form": parts}
@@ -403,24 +418,30 @@ def prop_instruction(request):
 def chat_page(request, id = 0):
     template = 'chat/chat_gpt_response.html'
         
-    # папка базы данных
-    persist_directory = 'chat/db/CrisEmbeddingsChat/'
-    # путь к учебным материалам
-    data_directory = 'chat/db/Cris/'
+    company_dir = 'Maxximize/'
+    # путь к учебным материалам Proposal
+    data_directory_prop = 'Maxximize'
+    
     #"chat/train_data_ask.jsonl"
-    system_doc = 'support_instruction.txt'
+    system_file = 'support_instruction.txt'
     
     try:
-        gptLearning = WorkerОpenAIChat(data_directory + system_doc, persist_directory)
+        gptLearning = WorkerОpenAIChat(system_file, company_dir)
     except openai.OpenAIError as e:
         template = 'chat/chat_msg_page.html'
         context = {"my_msg":f'OpenAI API Error: {e}'}
         return render(request, template, context)
-    
+    '''
+    except:
+        template = 'chat/chat_msg_page.html'
+        context = {"my_msg":'File not found!'}
+        return render(request, template, context)
+    '''
     chats = ChatList.objects.all()
     
-    subject_list = [(0, "TPS - Contact Form"), (1, "PSC - Contact Form"), (2, "PSN - Contact Form")]
-    company_list = [(0, "PayStabs"), (1, "None")]
+    #subject_list = [(0, "TPS - Contact Form"), (1, "PSC - Contact Form"), (2, "PSN - Contact Form")]
+    subject_list = [(0, "DELIVERY INQUIRIES"), (1, "EDIT"), (2, "PRICE MATCHING"), (3, "PRODUCT INQUIRIES"), (4, "RETURNS"), (5, "Customer Service - Guide"), (6, "FAQ")]
+    company_list = [(0, "Maxximize"), (1, "MagicVaporizers")]
     if request.method == "POST":
         #text_buf = "Amswer: "
         userform = ChatForm(request.POST or None)
@@ -441,12 +462,14 @@ def chat_page(request, id = 0):
             
             if(id > 0):
                 curr_chat = ChatList.objects.get(id=id)
+                print(f'\n ID: {id}\n ')
                 res = ChatHistory.objects.filter(message=curr_chat)
-                question_history = []
+                gptLearning.question_history = []
                 for qa in res:
                     if not (pd.isna(qa.user_question)):
-                        question_history.append(('\n' + qa.user_question, qa.ai_answer if qa.ai_answer is not None else ''))
+                        gptLearning.question_history.append(('\n' + qa.user_question, qa.ai_answer if qa.ai_answer is not None else ''))
                         
+            
             try:
                 response = gptLearning.answer_user_question(full_query, temp = tmp, verbose = 1)
             except openai.OpenAIError as e:
@@ -538,18 +561,32 @@ def chat_page(request, id = 0):
             if not (pd.isna(qa.user_question)):
                 messages += '\n\n User: ' + qa.user_question + ' ' + '\n Assistant: \n' + (qa.ai_answer if qa.ai_answer is not None else '')
         additional_data = request.GET.get('debug_field', None)
-        parts = ChatForm(initial= {"f_company":curr_chat.company, "f_subject":curr_chat.subject, "f_chat_name":curr_chat.chat_name, "f_chat_field":messages, 'f_debug_field':additional_data})
+        
+        parts = ChatForm(initial= {"f_company":get_key_by_val(curr_chat.company, company_list), "f_subject":curr_chat.subject, "f_chat_name":curr_chat.chat_name, "f_chat_field":messages, 'f_debug_field':additional_data})
 
     
     context = {"form": parts, "chat_list": chats}
     return render(request, template, context)
     
+def get_key_by_val(val, source):
+    
+    for k, v in source:
+        
+        if v == val:
+            return k
+    
 def new_em_proposal_page(request, id = 0):
     template = 'chat/chat_new_proposal.html'
-    
+    # папка базы данных Proposal
+    company_dir = 'Maxximize/'
+    # путь к учебным материалам Proposal
+    data_directory_prop = 'Maxximize'
+    system_file = 'proposal_instruction.txt'
                
     jobs = MessageChain.objects.all()
     models = [(0, 'gpt-3.5-turbo-0301'), (1, 'text-davinci-003')]
+    company_list = [(0, "Maxximize"), (1, "MagicVaporizers")]
+    
     if request.method == "POST":
         
         userform = JobForm(request.POST or None)
@@ -562,16 +599,19 @@ def new_em_proposal_page(request, id = 0):
             j_description = userform.cleaned_data["f_job_description"]
             curr_model = dict(models)[int(userform.cleaned_data["f_model"])]
             tmp = float(userform.cleaned_data['f_chat_temp'])
+            #curr_company = dict(company_list)[int(userform.cleaned_data["f_company"])]
             #print(f"\n Current model: {curr_model} \n")
                        
             try:
-                gptLearning = WorkerОpenAIProposal(WorkerОpenAIProposal.data_directory_prop + WorkerОpenAIProposal.system_doc_prop, WorkerОpenAIProposal.persist_directory_prop, curr_model)
+                gptLearning = WorkerОpenAIProposal(system_file, company_dir, curr_model)
             except openai.OpenAIError as e:
                 template = 'chat/chat_msg_page.html'
                 context = {"my_msg":f'OpenAI API Error: {e}'}
                 return render(request, template, context)
                         
-            query = f" Job title: {j_title}\n\n Job description: {j_description}\n"
+            query = f" Job title: {j_title}\n\n Job description: {j_description}\n\n Proposal:\n"
+            #query = f" Write a cover letter ( Proposal: ) for a job offer.  Job title: {j_title}\n\n Job description: {j_description}\n"
+            
             
             try:
                 response = gptLearning.get_gpt_proposal(query, temp = tmp, verbose = 1)
@@ -628,6 +668,11 @@ def new_em_proposal_page(request, id = 0):
     
 def edit_em_proposal_page(request, id = 0):
     template = 'chat/chat_edit_proposal.html'
+    company_dir = 'Maxximize/'
+    # путь к учебным материалам Proposal
+    data_directory_prop = 'Maxximize'
+    system_file = 'proposal_instruction.txt'
+    
     jobs = MessageChain.objects.all()
     models = [(0, 'gpt-3.5-turbo-0301'), (1, 'text-davinci-003')]
            
@@ -651,7 +696,7 @@ def edit_em_proposal_page(request, id = 0):
                         
             
             try:
-                gptLearning = WorkerОpenAIProposal(WorkerОpenAIProposal.data_directory_prop + WorkerОpenAIProposal.system_doc_prop, WorkerОpenAIProposal.persist_directory_prop, curr_model)
+                gptLearning = WorkerОpenAIProposal(system_file, company_dir, curr_model)
             except openai.OpenAIError as e:
                 template = 'chat/chat_msg_page.html'
                 context = {"my_msg":f'OpenAI API Error: {e}'}

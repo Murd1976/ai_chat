@@ -1,5 +1,10 @@
 
 from langchain.llms import OpenAI
+from langchain.chat_models import ChatOpenAI
+from langchain.chains import LLMRequestsChain, LLMChain
+from langchain.chains.summarize import load_summarize_chain
+from langchain.chains.question_answering import load_qa_chain
+from langchain.chains import AnalyzeDocumentChain
 from langchain.docstore.document import Document
 import requests
 from langchain.embeddings.openai import OpenAIEmbeddings
@@ -26,6 +31,7 @@ import openai
 import tiktoken
 import copy
 from dotenv import load_dotenv
+from .web_utils import scrape_site
 
 class bcolors:
     HEADER = '\033[95m'
@@ -43,31 +49,56 @@ class bcolors:
 load_dotenv()
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
-question_history = []
+
 
 class WorkerОpenAIChat():
+  sys_dir = 'chat/db/'
   # папка базы данных Chat
-  persist_directory = 'chat/db/CrisEmbeddingsChat/'
+  persist_directory = ''
   # путь к учебным материалам Chat
-  data_directory = 'chat/db/Cris/'
-  db_chat_file = "train_data_ask.jsonl"
-  system_doc_chat = 'support_instruction.txt'
+  data_directory = ''
+  db_chat_file = ""
+  system_doc_file = 'support_instruction.txt'
+  web_directory = ''
 
-  def __init__(self, chat_manager_system = None, persist_directory = None, mod = 'gpt-3.5-turbo-0301'):
-    global question_history
+  def __init__(self, system_file = '', company_dir = None, mod = 'gpt-3.5-turbo-0301'):
+    #global question_history
+    self.question_history = []
     self.model = mod
     self.debug_log = []
+    
+    self.persist_directory = self.sys_dir + 'chat/embedding/' + company_dir
+    self.system_doc = self.sys_dir + 'chat/sys/' + company_dir
+    self.system_doc_file = system_file
+    self.data_directory = self.sys_dir + 'chat/data/' + company_dir
+    self.web_directory = self.sys_dir + 'chat/web/' + company_dir
+    
+    if not os.path.exists(self.persist_directory):
+        os.mkdir(self.persist_directory)
+    if not os.path.exists(self.system_doc):
+        os.mkdir(self.system_doc)
+    if not os.path.exists(self.data_directory):
+        os.mkdir(self.data_directory)
+    if not os.path.exists(self.web_directory):
+        os.mkdir(self.web_directory)
+    '''
     if chat_manager_system:
       self.chat_manager_system = self.load_document_text(chat_manager_system)
     else:
       self.chat_manager_system = " "
+    '''
+    try:
+      self.chat_manager_system = self.load_document_text(self.system_doc + self.system_doc_file)
+    except:
+      self.chat_manager_system = " "
 
     # Если База данных embedding уже создана ранее
-    if os.path.exists(persist_directory + 'embedding_info.inf'):
-      #print("We use a ready-made database. Path: ", persist_directory)
-      self.debug_log.append("We use a ready-made database. Path: " + persist_directory)
-      self.db = Chroma(persist_directory=persist_directory,
+    if os.path.exists(self.persist_directory + 'embedding_info.inf'):
+      #print("We use a ready-made database. Path: ", self.persist_directory)
+      self.debug_log.append("We use a ready-made database. Path: " + self.persist_directory)
+      self.search_index = Chroma(persist_directory=self.persist_directory,
                             embedding_function=OpenAIEmbeddings())
+     
 
   # def get_key(self):
   #   openai.api_key = getpass.getpass(prompt='Введите секретный ключ для сервиса chatGPT: ')
@@ -138,7 +169,7 @@ class WorkerОpenAIChat():
 
     self.source_chunks.append(copy.deepcopy(self.buf_chunks))
 
-    self.db = Chroma(persist_directory=persist_directory, embedding_function=OpenAIEmbeddings())
+    self.search_index = Chroma(persist_directory=persist_directory, embedding_function=OpenAIEmbeddings())
     #print('Count: ', count_token, ' Tokens:  ', num_tokens_from_string(' '.join([x.page_content for x in buf_chunks]), "cl100k_base"))
     #print('Size: ', len(buf_chunks), '\n')
     count_token = 0
@@ -146,14 +177,14 @@ class WorkerОpenAIChat():
     #print('G_Size: ', self.source_chunks[1])
     #print('G_Size: ', self.source_chunks[2])
     for i in range(len(self.source_chunks)):
-      self.db.add_documents(documents=self.source_chunks[i])
+      self.search_index.add_documents(documents=self.source_chunks[i])
       print('sSize: ', len(self.source_chunks[i]))
       self.debug_log.append('sSize: ' + str(len(self.source_chunks[i])))
       count_token += num_tokens_from_string(' '.join([x.page_content for x in self.source_chunks[i]]), "cl100k_base")
       print(i, 'Counter: ', count_token)
       self.debug_log.append(str(i) + 'Counter: ' + str(count_token))
       time.sleep(77)
-    self.db.persist()
+    self.search_index.persist()
     
     f = open(persist_directory + 'embedding_info.inf', 'w')
     f.write(str(datetime.now()))
@@ -270,11 +301,15 @@ class WorkerОpenAIChat():
 
       return dialog
 
-  def answer_index(self, system, topic, search_index, temp=1, verbose=0):
+  def answer_index(self, topic, user_question, temp=1, verbose=0):
 
       # Selecting documents similar to the question
-      docs = search_index.similarity_search(topic, k=5)
+      docs = self.search_index.similarity_search(f'Subject": {user_question["subject"]}\n"' + "\n\n Сurrent issue: " + user_question['issue'], k=5)
+      #docs = self.search_index.similarity_search(topic, k=5)
       
+      #docs = self.search_index.get_relevant_documents(topic)
+      
+      #print(f'\n {topic} \n')
       message_content = re.sub(r'\n{2}', ' ', '\n '.join([f'\nText №{i+1}\n=====================' + doc.page_content + '\n' for i, doc in enumerate(docs)]))
       if verbose: 
         #print('\n ===========================================: ')
@@ -282,9 +317,10 @@ class WorkerОpenAIChat():
         
         #self.debug_log.append('\n ===========================================: \n')
         #self.debug_log.append('message_content :\n ======================================== \n' + message_content)
-        
+     
+      #print(f'\n System: {self.chat_manager_system} \n')
       messages = [
-          {"role": "system", "content": system + f"{message_content}"},
+          {"role": "system", "content": self.chat_manager_system + f"{message_content}"},
           {"role": "user", "content": topic}
       ]
 
@@ -364,19 +400,19 @@ class WorkerОpenAIChat():
 
       # Если в истории более одного вопроса, применяем суммаризацию
       summarized_history = ""
-      if len(question_history) > 0:
-          summarized_history = "Here is a summary of the previous dialogue: " + self.summarize_questions([q + ' ' + (a if a is not None else '') for q, a in question_history])
+      if len(self.question_history) > 0:
+          summarized_history = "Here is a summary of the previous dialogue: " + self.summarize_questions([q + ' ' + (a if a is not None else '') for q, a in self.question_history])
 
       # Добавляем явное разделение между историей диалога и текущим вопросом
       #query = '"prompt":" Company: PayStabs\n User name: Jenny021914\n Subject: PSC - Contact Form\n' + query + '"'
       input_text =summarized_history + f'"prompt":" Company: {user_question["company"]}\n User name: {user_question["user_name"]}\n Subject": {user_question["subject"]}\n"' + "\n\n Сurrent issue: " + user_question['issue']
 
       # Извлечение наиболее похожих отрезков текста из базы знаний и получение ответа модели
-      answer_text = self.answer_index(self.chat_manager_system, input_text, self.db, temp=temp, verbose = verbose)
-
+      answer_text = self.answer_index(input_text, user_question, temp=temp, verbose = verbose)
+      '''
       # Добавляем вопрос пользователя и ответ системы в историю
       tt = datetime.now().strftime('%m/%d/%Y %H:%M:%S')
-      question_history.append((tt + '\n' + user_question['issue'], answer_text if answer_text is not None else ''))
+      self.question_history.append((tt + '\n' + user_question['issue'], answer_text if answer_text is not None else ''))
 
       # Выводим суммаризированный текст, который видит модель
       if summarized_history != "":
@@ -384,7 +420,7 @@ class WorkerОpenAIChat():
           self.debug_log.append("Here is the summarized text that the model sees:\n" + summarized_history)
       #print('\n', user_question, '\n')
       self.debug_log.append('\n' + user_question['issue'] + '\n')
-      
+      '''
       return answer_text
 
   def run_dialog(self, system_doc_url, knowledge_base_url):
@@ -404,28 +440,58 @@ class WorkerОpenAIChat():
 #========================================================================================================================================================================
 
 class WorkerОpenAIProposal():
+  sys_dir = 'chat/db/'
   # папка базы данных Proposal
-  persist_directory_prop = 'chat/db/CrisEmbeddingsProposal/'
+  persist_directory = ''
   # путь к учебным материалам Proposal
-  data_directory_prop = 'chat/db/CrisProposal/'
-  db_proposal_file = 'train_data_jobs.jsonl'
-  system_doc_prop = 'proposal_instruction.txt'
+  data_directory = ''
+  #db_proposal_file = 'train_data_jobs.jsonl'
+  system_doc = ''
+  system_doc_file = ''
+  web_directory = ''
+  
+  system_doc_web_prop = 'html_proposal_instruction.txt'
+  
 
-  def __init__(self, chat_manager_system = " ", persist_directory = None, mod = 'gpt-3.5-turbo-0301'):
+  def __init__(self, system_file = '', company_dir = None, mod = 'gpt-3.5-turbo-0301'):
     self.model = mod
     self.debug_log = []
-
+    self.persist_directory = self.sys_dir + 'proposal/embedding/' + company_dir
+    self.system_doc = self.sys_dir + 'proposal/sys/' + company_dir
+    self.system_doc_file = system_file
+    self.data_directory = self.sys_dir + 'proposal/data/' + company_dir
+    self.web_directory = self.sys_dir + 'proposal/web/' + company_dir
+    
+    if not os.path.exists(self.persist_directory):
+        os.mkdir(self.persist_directory)
+    if not os.path.exists(self.system_doc):
+        os.mkdir(self.system_doc)
+    if not os.path.exists(self.data_directory):
+        os.mkdir(self.data_directory)
+    if not os.path.exists(self.web_directory):
+        os.mkdir(self.web_directory)
+    
+    '''
     if chat_manager_system:
       self.chat_manager_system = self.load_document_text(chat_manager_system)
     else:
       self.chat_manager_system = " "
-    
+    '''
+    try:
+      self.chat_manager_system = self.load_document_text(self.system_doc + self.system_doc_file)
+    except:
+      self.chat_manager_system = " "
+      
     # Если База данных embedding уже создана ранее
-    if os.path.exists(persist_directory + 'embedding_info.inf'):
-      print("We use a ready-made database. Path: ", persist_directory)
-      self.debug_log.append("We use a ready-made database. Path: " + persist_directory)
-      self.db = Chroma(persist_directory=persist_directory,
+    if os.path.exists(self.persist_directory + 'embedding_info.inf'):
+      print("We use a ready-made database. Path: ", self.persist_directory)
+      self.debug_log.append("We use a ready-made database. Path: " + self.persist_directory)
+      self.db = Chroma(persist_directory=self.persist_directory,
                             embedding_function=OpenAIEmbeddings())
+    else:
+      print("Embeddings database not found!")
+      self.debug_log.append("Embeddings database not found!")
+      #self.db = Chroma(persist_directory=self.persist_directory, embedding_function=OpenAIEmbeddings())
 
   # def get_key(self):
   #   openai.api_key = getpass.getpass(prompt='Введите секретный ключ для сервиса chatGPT: ')
@@ -438,7 +504,7 @@ class WorkerОpenAIProposal():
 
       return text
 
-  def create_embedding(self, doc_dir="/content/drive/MyDrive/ColabNotebooks/ChatGPT/DB/CrisProposal/", persist_directory=""):
+  def create_embedding(self, doc_dir="", persist_directory=""):
     def num_tokens_from_string(string: str, encoding_name: str) -> int:
       """Returns the number of tokens in a text string."""
       encoding = tiktoken.get_encoding(encoding_name)
@@ -453,27 +519,32 @@ class WorkerОpenAIProposal():
     #print('Files: ', os.listdir(doc_dir))
 
     #print("File is loading: ", doc_dir)
-    self.debug_log.append("File is loading:" + doc_dir)
-    # разбиваем на несколько частей с помощью метода split_text
+    
+    # проходимся по всем данным
     count_token = 0
-    with open(doc_dir, "r") as f:
-      for chunk in splitter.split_text(f.read()):
-          #print('Длина символов =  ', len(chunk))
+    for file_ in sorted(os.listdir(doc_dir)):
+        print("Загружается файл: ", file_)
+        self.debug_log.append("File is loading:" + doc_dir)
+        # разбиваем на несколько частей с помощью метода split_text
+        
+        with open(doc_dir + file_, "r") as f:
+          for chunk in splitter.split_text(f.read()):
+              #print('Длина символов =  ', len(chunk))
 
-          count_token += num_tokens_from_string(chunk, "cl100k_base")
-          if count_token > 140000:
-           
-            #print('Count: ', count_token, ' Tokens:  ', num_tokens_from_string(' '.join([x.page_content for x in self.buf_chunks]), "cl100k_base"))
-            
-            count_token = 0
-            self.source_chunks.append(copy.deepcopy(self.buf_chunks))
-           
-            #print('Size: ', len(self.buf_chunks), '\n')
-            self.buf_chunks.clear()
-            
-            self.buf_chunks.append(Document(page_content=chunk, metadata={'source': doc_dir}))
-          else:
-            self.buf_chunks.append(Document(page_content=chunk, metadata={'source': doc_dir}))
+              count_token += num_tokens_from_string(chunk, "cl100k_base")
+              if count_token > 140000:
+               
+                #print('Count: ', count_token, ' Tokens:  ', num_tokens_from_string(' '.join([x.page_content for x in self.buf_chunks]), "cl100k_base"))
+                
+                count_token = 0
+                self.source_chunks.append(copy.deepcopy(self.buf_chunks))
+               
+                #print('Size: ', len(self.buf_chunks), '\n')
+                self.buf_chunks.clear()
+                
+                self.buf_chunks.append(Document(page_content=chunk, metadata={'source': doc_dir}))
+              else:
+                self.buf_chunks.append(Document(page_content=chunk, metadata={'source': doc_dir}))
 
     self.source_chunks.append(copy.deepcopy(self.buf_chunks))
 
@@ -492,6 +563,7 @@ class WorkerОpenAIProposal():
       print(i, 'Counter: ', count_token)
       self.debug_log.append(str(i) + 'Counter: ' + str(count_token))
       time.sleep(77)
+      
     self.db.persist()
     
     f = open(persist_directory + 'embedding_info.inf', 'w')
@@ -542,22 +614,86 @@ class WorkerОpenAIProposal():
           raise NotImplementedError(f"""num_tokens_from_messages() is not presently implemented for model {model}.
   See https://github.com/openai/openai-python/blob/main/chatml.md for information on how messages are converted to tokens.""")
 
-
+  def get_input(self, question: str, my_url):
+    inputs = {
+    "query": question,
+    #"requests_result": scrape_site("https://maxximize.me/", 'maxximize.txt')
+    "url": my_url,
+    }
+    return inputs
+  
+  def get_web_gpt_proposal(self, topic, temp = 0.5, verbose = 0):
+  
+    # Подготавливаем темплейт для формирования запроса и получения ответа
+    #template = self.load_document_text(self.data_directory_prop + self.system_doc_web_prop)
+    
+    res_f_name = 'magicvaporizers.txt'
+    my_url = "https://magicvaporizers.co.uk"
+    
+    template = """Between >>> and <<< are the raw content text from site.
+        Extract the answer to the question '{query}' or say "not found" if the information is not contained.
+        Use the format
+        Extracted:<answer or "not found">
+        >>> {requests_result} <<<
+        Extracted:"""
+    
+    #scrape_site("https://maxximize.me/", 'maxximize.txt')
+    #scrape_site(my_url, res_f_name)
+    #https://magicvaporizers.co.uk
+    
+    llm=ChatOpenAI(temperature=0)
+    my_chain = load_qa_chain(llm, chain_type="map_reduce")
+    #summary_chain = load_summarize_chain(llm, chain_type="map_reduce")
+    document_chain = AnalyzeDocumentChain(combine_docs_chain=my_chain)
+    
+    with open(res_f_name) as f:
+        text_doc = f.read()
+    
+    #print(document_chain.run(input_document=text_doc, question="Remove any irrelevant or duplicate information, correct any errors or inconsistencies, and standardize the data format."))
+    #print(document_chain.run(input_document=text_doc, question="Show information about the services provided from the loaded site in the form of a numbered list."))
+    #print(document_chain.run(text_doc))
+    
+    PROMPT = PromptTemplate(
+        input_variables=["query", "requests_result"],
+        template=template,
+    )
+    
+    # Инициализируем класс
+    chain = LLMRequestsChain(llm_chain=LLMChain(llm=llm, prompt=PROMPT))
+    
+    # Запускаем на вопросе
+    #question = self.get_input(topic)
+    question = self.get_input("Show information about the services provided from the loaded site in the form of a numbered list.", my_url)
+    
+    answer = chain(question)
+    print(answer)
+    return answer  # возвращает ответ
+  
   def get_gpt_proposal(self, topic, temp = 0.5, verbose = 0):
 
     # Выборка документов по схожести с вопросом
-    docs = self.db.similarity_search(topic, k=4)
-    message_content = re.sub(r'\n{2}', ' ', '\n '.join([f'\n=====' + doc.page_content + '\n' for i, doc in enumerate(docs)]))
-    #if verbose:
-        #self.debug_log.append('message_content :\n ======================================== \n' + message_content)
+    try:
+        docs = self.db.similarity_search('Company Maxximaze provides a range of services. Features of our company. Our competencies. Our partners. Our contact details.', k=4)
+        message_content = re.sub(r'\n{2}', ' ', '\n '.join([f'\n=====' + doc.page_content + '\n' for i, doc in enumerate(docs)]))
+    except:
+        message_content = ''
+        print('\n No embedding data! \n')
+        self.debug_log.append('\n No embedding data! \n')
+        
+    if verbose:
+        print('message_content :\n ======================================== \n' + message_content)
 
-
+    sys_template = self.chat_manager_system
+    
     messages = [
-      {"role": "system", "content": self.chat_manager_system},
-      {"role": "user", "content": f"Analyze the texts of the documents {message_content} and based on the title ( Job title: ) and job description ( Job description: ) write a detailed cover letter for a job offer ( Proposal: ) \n{topic}."}
+      {"role": "system", "content": sys_template},
+      #{"role": "user", "content": f"Analyze the texts of the documents {message_content} and based on the title ( Job title: ) and job description ( Job description: ) write a detailed cover letter for a job offer ( Proposal: ) First of all, you need to follow the system rules. \n{topic}."}
+      {"role": "user", "content": f"{topic}\n Additional information : {message_content}"}
+      #{"role": "user", "content": topic}
       ]
 
-
+    print(f"Prompt: {messages}")
+    
     # example token count from the function defined above
     if verbose: 
         self.debug_log.append('\n ===========================================: ')

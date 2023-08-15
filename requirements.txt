@@ -17,6 +17,7 @@ langchain
 chromadb
 gspread 
 oauth2client
+lxml
 
 gunicorn
 psycopg2

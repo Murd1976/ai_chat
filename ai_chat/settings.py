@@ -30,8 +30,8 @@ ALLOWED_HOSTS = ["212.127.94.75", "docker8241-ft-stable.node.cloudlets.zone", "n
 
 EMAIL_USE_TLS = True
 EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_HOST_USER = 'crypto.backtest@gmail.com'
-EMAIL_HOST_PASSWORD = 'fmpgfmwpotmbtwlx'
+EMAIL_HOST_USER = 'murd.chatai@gmail.com'
+EMAIL_HOST_PASSWORD = 'seyrawqoykckgbgb' #'Ambaloid1234'
 EMAIL_PORT = 587
 
 # Application definition

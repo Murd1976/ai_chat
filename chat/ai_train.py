@@ -348,10 +348,12 @@ def create_train_file():
     messages = []
     
     for message_chain in MessageChain.objects.all():
-        messages.append([" Job title: " + message_chain.job_title + "\n" + ' Job description: ' + message_chain.job_description+ "\n\n###\n\n", ' Proposal: ' + message_chain.proposal_cover_letter + " &&&"])
+        #messages.append([" Job title: " + message_chain.job_title + "\n" + ' Job description: ' + message_chain.job_description+ "\n\n###\n\n", ' Proposal: ' + message_chain.proposal_cover_letter + " &&&"])
+        messages.append([message_chain.proposal_cover_letter])
         #messages.append([" Job title: " + "\n" + ' Job description: ' + "\n\n###\n\n", ' Proposal: ' + "#END"])
         
-    df = pd.DataFrame(messages, columns=['prompt', 'completion'])
+    #df = pd.DataFrame(messages, columns=['prompt', 'completion'])
+    df = pd.DataFrame(messages, columns=['proposal'])
     
     #create JSON file 
     json_file = df.to_json (orient='records', lines=True) 

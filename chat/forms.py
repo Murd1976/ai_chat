@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from .models import AdvUser
 from .apps import user_registered
 
-version = 3.3
+version = 3.4
 
 class UserForm(forms.Form):
     name = forms.CharField()
@@ -64,8 +64,9 @@ class ChatForm(forms.Form):
     f_ask_field = forms.CharField(label = 'Ask field', widget= forms.Textarea(attrs={'class':'text_field', 'rows':'8', 'cols':'100'}), disabled = False, required=True)
     f_chat_field = forms.CharField(label = 'Chat field',widget= forms.Textarea(attrs={'class':'text_field', 'rows':'15', 'cols':100}), disabled = False, required=False)
     f_debug_field = forms.CharField(label = 'Debug field',widget= forms.Textarea(attrs={'class':'text_field', 'rows':'8', 'cols':'100'}), disabled = False, required=False)
-    f_subject = forms.ChoiceField(label="Select a subject:", initial=0, required= True, choices=((0, "TPS - Contact Form"), (1, "PSC - Contact Form"), (2, "PSN - Contact Form")))
-    f_company = forms.ChoiceField(label="Select a company:", initial=0, required= True, choices=((0, "PayStabs"), (1, "None")))
+    #f_subject = forms.ChoiceField(label="Select a subject:", initial=0, required= True, choices=((0, "TPS - Contact Form"), (1, "PSC - Contact Form"), (2, "PSN - Contact Form")))
+    f_subject = forms.ChoiceField(label="Select a subject:", initial=0, required= True, choices=((0, "DELIVERY INQUIRIES"), (1, "EDIT"), (2, "PRICE MATCHING"), (3, "PRODUCT INQUIRIES"), (4, "RETURNS"), (5, "Customer Service - Guide"), (6, "FAQ")))
+    f_company = forms.ChoiceField(label="Select a company:", initial=0, required= True, choices=((0, "Maxximize"), (1, "MagicVaporizers")))
     f_chat_name = forms.CharField(label="Chat name", initial = 'New', widget=forms.TextInput(attrs={'readonly': 'readonly', 'size': 50}))
     
     f_chat_temp = forms.DecimalField(label="Temperature:", min_value=0, max_value=1, initial=0.5, decimal_places=1, widget=forms.NumberInput( attrs={'size':'3'}), required=False)
@@ -79,6 +80,7 @@ class JobForm(forms.Form):
     f_model = forms.ChoiceField(label="Select an AI model:", initial=0, required= True, choices=((0, "gpt-3.5-turbo"), (1, "text-davinci-003")))
     f_debug_field = forms.CharField(label = 'Debug field',widget= forms.Textarea(attrs={'class':'text_field', 'rows':'8', 'cols':'90'}), disabled = False, required=False)
     f_chat_temp = forms.DecimalField(label="Temperature:", min_value=0, max_value=1, initial=0.5, decimal_places=1, widget=forms.NumberInput( attrs={'size':'3'}), required=False)
+    
     
 class EditInstructionForm(forms.Form):
 

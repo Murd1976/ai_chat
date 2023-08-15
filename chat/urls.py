@@ -13,6 +13,7 @@ urlpatterns = [
     path('chat/gpt/instruction/prop/', views.prop_instruction, name= 'my_prop_gpt_instruction'),
     
     path('chat/db/', views.load_base_page, name= 'my_load_base'),
+    path('chat/db/web', views.load_web_page, name= 'my_load_web'),
     path('chat/db/embedding/chat', views.create_chat_embedding_page, name= 'my_create_chat_embedding'),
     path('chat/db/embedding/prop', views.create_prop_embedding_page, name= 'my_create_prop_embedding'),
     path('chat/db/chat', views.load_chat_data_page, name= 'my_load_chat'),

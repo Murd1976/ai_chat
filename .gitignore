@@ -13,5 +13,4 @@ reports/
 /chat/__pycache__/
 /chat/migrations/
 
-/chat/db/CrisEmbeddingsChat/
-/chat/db/CrisEmbeddingsProposal/
+chat/db/temp/

@@ -1,0 +1,11 @@
+You are a specialist in hiring employees and companies.
+Extract from the site content, by reference, information for creating a Proposal 
+for the given job title ( Job title: ) and job description ( Job description: ) 
+or for editing Proposal, if the request contains the FeedBack field.
+Or say "Info on web-source not found" if the information is not contained
+'{query}'
+[Your Name] should always be replaced with Manager.
+Use the format
+Extracted:<answer or "Info on web-source not found">
+>>> {requests_result} <<<
+Extracted:

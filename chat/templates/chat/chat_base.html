@@ -64,6 +64,7 @@
 					
 					{% if user.is_superuser %}
 					<li class="nav-item root"><a class="nav-link" href="{% url 'chat:my_load_base' %}">Load data base</a></li>
+					<li class="nav-item root"><a class="nav-link" href="{% url 'chat:my_load_web' %}">Load WEB</a></li>
 					<li class="nav-item root"><a class="nav-link" href="{% url 'chat:my_create_chat_embedding' %}">Create chat embedding</a></li>
 					<li class="nav-item root"><a class="nav-link" href="{% url 'chat:my_create_prop_embedding' %}">Create prop embedding</a></li>
 					<li class="nav-item root"><a class="nav-link" href= "{% url 'chat:my_train_model' %}"> Train model </a></li>
@@ -83,7 +84,7 @@
           </section>
       	</div>
 		<footer class="mt-3">
-			<p class="text-right font-italic"> v3.3  &copy; Murd.</p>
+			<p class="text-right font-italic"> v3.4  &copy; Murd.</p>
 		</footer>
 		
 
